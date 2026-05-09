@@ -1,0 +1,1576 @@
+/* Twitter/X-inspired theme for Giveaway Tracker */
+
+/* CSS Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #000000;
+  color: #e7e9ea;
+  line-height: 1.5;
+}
+
+a {
+  color: #1d9bf0;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Container */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+
+.header h1 {
+  color: #e7e9ea;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.home-link {
+  color: #e7e9ea;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  transition: background-color 0.2s;
+}
+
+.home-link:hover {
+  background-color: rgba(231, 233, 234, 0.1);
+  text-decoration: none;
+}
+
+/* Main Content - Simple border container without background */
+.main {
+  border: 1px solid #2f3336;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: #71767b;
+  font-size: 0.875rem;
+  margin-top: 16px;
+}
+
+/* Giveaway Container */
+.giveaway-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.giveaway-container h2 {
+  color: #e7e9ea;
+  font-size: 1.25rem;
+  font-weight: 700;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  margin-bottom: 8px;
+}
+
+.description {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  hyphens: auto;
+  margin-bottom: 12px;
+}
+
+.description a {
+  word-break: break-all;
+}
+
+/* Info rows with better styling */
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid #2f3336;
+  font-size: 0.95rem;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: #71767b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  color: #e7e9ea;
+  font-weight: 500;
+}
+
+/* Info value with badge layout */
+.info-value-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-active {
+  background-color: rgba(0, 186, 124, 0.2);
+  color: #00ba7c;
+  border: 1px solid rgba(0, 186, 124, 0.3);
+}
+
+.status-finished {
+  background-color: rgba(244, 33, 46, 0.2);
+  color: #f4212e;
+  border: 1px solid rgba(244, 33, 46, 0.3);
+}
+
+/* Rules styled as info row */
+.rules {
+  padding: 12px 0;
+  border-bottom: 1px solid #2f3336;
+  font-size: 0.95rem;
+}
+
+.rules:last-child {
+  border-bottom: none;
+}
+
+.rules strong {
+  color: #71767b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.875rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.rules p {
+  color: #e7e9ea;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Rules Badges */
+.rules-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #16181c;
+  border: 1px solid #2f3336;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  color: #e7e9ea;
+  font-weight: 500;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.rule-badge:hover {
+  border-color: #1d9bf0;
+  background-color: #000000;
+}
+
+.giveaway-settings h3,
+.participants-section h3,
+.winners-section h3 {
+  color: #e7e9ea;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2f3336;
+  overflow-wrap: break-word;
+}
+
+.already-registered {
+  padding: 16px;
+  color: #71767b;
+  font-size: 0.95rem;
+}
+
+.already-registered code {
+  background-color: #000000;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  border: 1px solid #2f3336;
+  color: #1d9bf0;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #e7e9ea;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #e7e9ea;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #71767b;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  transition: background-color 0.2s, transform 0.1s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Primary Button (Join, Save) */
+.submit-btn,
+.join-btn,
+.save-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background-color: #1d9bf0;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.submit-btn:hover,
+.join-btn:hover,
+.save-btn:hover {
+  background-color: #1a8cd8;
+  text-decoration: none;
+}
+
+.join-warning {
+  color: #f30;
+  padding: 16px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Secondary Buttons (Add Rule, Add Range) */
+.add-rule-btn,
+.add-range-btn {
+  padding: 10px 16px;
+  background-color: #e7e9ea;
+  color: #0f1419;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.add-rule-btn:hover,
+.add-range-btn:hover {
+  background-color: #d1d5da;
+}
+
+/* Danger Buttons (Remove, Reject, Logout) */
+.remove-btn,
+.logout-btn,
+.delete-btn {
+  padding: 8px 12px;
+  background-color: #f4212e;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.remove-btn:hover,
+.logout-btn:hover,
+.delete-btn:hover {
+  background-color: #d91a27;
+}
+
+/* Action Buttons (Approve, Build Payout, Finish) */
+.approve-btn,
+.build-payout-btn,
+.finish-btn,
+.reopen-btn {
+  padding: 12px 20px;
+  background-color: #1d9bf0;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-right: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.approve-btn:hover,
+.build-payout-btn:hover,
+.finish-btn:hover,
+.reopen-btn:hover {
+  background-color: #1a8cd8;
+  text-decoration: none;
+}
+
+.reject-btn {
+  padding: 12px 20px;
+  background-color: #f4212e;
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.reject-btn:hover {
+  background-color: #d91a27;
+  text-decoration: none;
+}
+
+/* Links */
+.manage-link,
+.admin-link {
+  display: inline-block;
+  margin-top: 16px;
+  color: #1d9bf0;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  transition: background-color 0.2s;
+}
+
+.manage-link:hover,
+.admin-link:hover {
+  background-color: rgba(29, 155, 240, 0.1);
+  text-decoration: none;
+}
+
+/* Table Styles */
+.winners-table,
+.participants-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  display: block;
+  max-width: 100%;
+}
+
+.winners-table th,
+.winners-table td,
+.participants-table th,
+.participants-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #2f3336;
+  min-width: 80px;
+}
+
+.winners-table th,
+.participants-table th {
+  color: #71767b;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.winners-table tr:hover,
+.participants-table tr:hover {
+  background-color: #000000;
+}
+
+.winners-table tr:last-child td,
+.participants-table tr:last-child td {
+  border-bottom: none;
+}
+
+.wallet-hash {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #e7e9ea;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 200px;
+}
+
+.wallet-cell a {
+  color: #1d9bf0;
+  font-size: 0.85rem;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 180px;
+}
+
+/* Table Container for horizontal scrolling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+  min-width: 600px;
+  width: 100%;
+  display: table;
+  border-collapse: collapse;
+}
+
+.table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #16181c;
+  border-radius: 0 0 8px 8px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #333639;
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #45494d;
+}
+
+.wallet-cell a:hover {
+  text-decoration: underline;
+}
+
+/* Status Badges */
+.status-approved {
+  color: #00ba7c;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-pending {
+  color: #71767b;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Social Badge Links */
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.social-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.social-badge:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+}
+
+.social-badge.twitter {
+  background-color: #1d9bf0;
+  color: #ffffff;
+}
+
+.social-badge.discord {
+  background-color: #5865f2;
+  color: #ffffff;
+}
+
+.no-social {
+  color: #71767b;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Approval Checkbox */
+.approval-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 12px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.approval-checkbox:hover {
+  border-color: #1d9bf0;
+  background-color: #16181c;
+}
+
+.approval-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #00ba7c;
+}
+
+.approval-checkbox input[type="checkbox"]:checked {
+  accent-color: #00ba7c;
+}
+
+.approval-checkbox span {
+  font-weight: 600;
+  color: #e7e9ea;
+}
+
+/* Rule Item */
+.rule-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rule-input-row input {
+  flex: 1;
+  padding: 10px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #e7e9ea;
+}
+
+.rule-input-row input:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.rule-list {
+  margin-top: 12px;
+}
+
+.rule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #000000;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #2f3336;
+}
+
+.rule-item span {
+  flex: 1;
+  color: #e7e9ea;
+  font-size: 0.95rem;
+}
+
+/* Range Item */
+.range-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.range-input-row input {
+  padding: 10px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #e7e9ea;
+}
+
+.range-input-row input:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.range-input-row input:first-child {
+  width: 100px;
+}
+
+.range-input-row input:nth-child(2) {
+  width: 120px;
+}
+
+.range-list {
+  margin-top: 12px;
+}
+
+.range-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #000000;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #2f3336;
+}
+
+.range-item span {
+  color: #e7e9ea;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Manage Page Specific */
+.manage-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.manage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2f3336;
+  gap: 16px;
+}
+
+.manage-header h2 {
+  color: #e7e9ea;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Section Styles - Removed background colors, keep only borders */
+.giveaway-settings,
+.participants-section,
+.winners-section,
+.actions-section,
+.auth-form {
+  padding: 20px;
+  border: 1px solid #2f3336;
+  border-radius: 16px;
+  overflow-wrap: break-word;
+}
+
+.giveaway-settings h3,
+.participants-section h3,
+.winners-section h3 {
+  color: #e7e9ea;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2f3336;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.giveaway-settings textarea,
+.giveaway-settings input[type="number"] {
+  width: 100%;
+  padding: 12px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: #e7e9ea;
+  box-sizing: border-box;
+}
+
+.giveaway-settings textarea:focus,
+.giveaway-settings input:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.giveaway-settings small {
+  display: block;
+  margin-top: 6px;
+  color: #71767b;
+  font-size: 0.85rem;
+}
+
+/* Fix for long text in rule and range items */
+.rule-item span,
+.range-item span {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Fix for long wallet addresses in tables */
+.wallet-cell a,
+.wallet-hash {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
+/* Action Buttons Section */
+.actions-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Actions Row - Save Settings + Build Payout */
+.actions-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.actions-row .save-btn {
+  flex: 1;
+  min-width: 200px;
+}
+
+.actions-row .build-payout-btn {
+  background-color: #f7931a;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 14px 24px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.actions-row .build-payout-btn:hover {
+  background-color: #e08215;
+  text-decoration: none;
+}
+
+/* Auth Form */
+.auth-form {
+  text-align: center;
+  padding: 30px;
+}
+
+.auth-form h2 {
+  color: #e7e9ea;
+  margin-bottom: 20px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.auth-form input {
+  width: 100%;
+  max-width: 300px;
+  padding: 12px 16px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #e7e9ea;
+  margin-bottom: 16px;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.auth-form button {
+  padding: 12px 32px;
+  background-color: #1d9bf0;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.auth-form button:hover {
+  background-color: #1a8cd8;
+  text-decoration: none;
+}
+
+/* Loading, Error, No Content States */
+.loading,
+.error,
+.no-giveaway,
+.participants-section p {
+  text-align: center;
+  padding: 40px;
+  color: #71767b;
+  font-size: 0.95rem;
+}
+
+.error {
+  color: #f4212e;
+  background-color: rgba(244, 33, 46, 0.1);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 33, 46, 0.2);
+}
+
+/* Finish Notification */
+.finish-notification {
+  border: 1px solid #2f3336;
+  color: #e7e9ea;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Auto-Finish Spinner */
+.auto-finish-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1d9bf0;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  html {
+    font-size: 14px;
+  }
+
+  .container {
+    padding: 12px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .home-link {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+
+  .main {
+    border-radius: 12px;
+  }
+
+  .main > * {
+    margin-bottom: 12px;
+  }
+
+  .manage-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    padding-bottom: 12px;
+  }
+
+  .manage-header h2 {
+    font-size: 1.1rem;
+    margin: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .admin-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .logout-btn {
+    font-size: 0.85rem;
+    padding: 8px 16px;
+  }
+
+  .giveaway-settings,
+  .participants-section,
+  .winners-section,
+  .actions-section {
+    padding: 16px;
+  }
+
+  .giveaway-settings h3,
+  .participants-section h3,
+  .winners-section h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .rule-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .rule-input-row button {
+    width: 100%;
+  }
+
+  .range-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .range-input-row input {
+    width: 100%;
+    flex: 1;
+  }
+
+  .range-input-row button {
+    width: 100%;
+  }
+
+  .rule-item,
+  .range-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .rule-item span,
+  .range-item span {
+    width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .remove-btn {
+    align-self: flex-end;
+  }
+
+  .actions-section {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .approve-btn,
+  .build-payout-btn,
+  .finish-btn,
+  .reopen-btn,
+  .reject-btn {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 0;
+  }
+
+  .participants-table,
+  .winners-table {
+    font-size: 0.75rem;
+  }
+
+  .participants-table th,
+  .participants-table td,
+  .winners-table th,
+  .winners-table td {
+    padding: 8px 10px;
+  }
+
+  .wallet-cell a,
+  .wallet-hash {
+    max-width: 150px;
+    font-size: 0.75rem;
+  }
+
+  .social-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .social-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+
+  .approval-checkbox {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+  }
+
+  .finish-notification {
+    padding: 12px 16px;
+    font-size: 0.9rem;
+  }
+
+  .status-approved,
+  .status-pending {
+    font-size: 0.8rem;
+  }
+
+  .auth-form {
+    padding: 20px;
+  }
+
+  .auth-form h2 {
+    font-size: 1.1rem;
+  }
+
+  .auth-form input {
+    font-size: 0.95rem;
+  }
+
+  .auth-form button {
+    font-size: 0.95rem;
+    padding: 10px 24px;
+  }
+
+  .footer {
+    padding: 16px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 400px) {
+  .container {
+    padding: 8px;
+  }
+
+  .main {
+    padding: 8px;
+  }
+
+  .giveaway-settings,
+  .participants-section,
+  .winners-section,
+  .actions-section {
+    padding: 12px;
+  }
+
+  .participants-table,
+  .winners-table {
+    font-size: 0.7rem;
+  }
+
+  .participants-table th,
+  .participants-table td,
+  .winners-table th,
+  .winners-table td {
+    padding: 6px 8px;
+  }
+
+  .wallet-cell a,
+  .wallet-hash {
+    max-width: 120px;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 768px) {
+  .container {
+    max-width: 800px;
+  }
+
+  .manage-header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .admin-actions {
+    justify-content: flex-end;
+  }
+
+  .rule-input-row,
+  .range-input-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .rule-item,
+  .range-item {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .actions-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .approve-btn,
+  .build-payout-btn,
+  .finish-btn,
+  .reopen-btn,
+  .reject-btn {
+    margin-right: 8px;
+  }
+
+  .participants-table,
+  .winners-table {
+    display: table;
+    width: 100%;
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.giveaway-container > *,
+.manage-container > *,
+.giveaway-settings,
+.participants-section,
+.winners-section,
+.actions-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #16181c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333639;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #45494d;
+}
+
+/* Selection Color */
+::selection {
+  background-color: #1d9bf0;
+  color: #ffffff;
+}
+
+/* Card Component Styles */
+.card {
+  background-color: transparent;
+  border: 1px solid #2f3336;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.card-title {
+  color: #e7e9ea;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2f3336;
+}
+
+.card-content {
+  color: #e7e9ea;
+}
+
+/* Winner Check Card Styles */
+.winner-check-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.winner-check-form .form-group {
+  margin-bottom: 0;
+}
+
+.check-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background-color: #1d9bf0;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background-color 0.2s;
+}
+
+.check-btn:hover:not(:disabled) {
+  background-color: #1a8cd8;
+  text-decoration: none;
+}
+
+.check-btn:disabled {
+  background-color: #333639;
+  color: #71767b;
+  cursor: not-allowed;
+}
+
+.winner-result {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #2f3336;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.winner-result-win {
+  background-color: rgba(0, 186, 124, 0.15);
+  border-color: rgba(0, 186, 124, 0.3);
+}
+
+.winner-result-lose {
+  background-color: rgba(113, 118, 123, 0.1);
+  border-color: #2f3336;
+}
+
+.winner-congrats {
+  text-align: center;
+}
+
+.winner-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.winner-text {
+  color: #e7e9ea;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.prize-amount {
+  color: #00ba7c;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.winner-not {
+  text-align: center;
+}
+
+.result-label {
+  color: #71767b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.wallet-hash-display {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #e7e9ea;
+  word-break: break-all;
+  display: inline-block;
+  background-color: #000000;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #2f3336;
+  margin-bottom: 12px;
+}
+
+.not-winner-text {
+  color: #71767b;
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+
+/* Distribution section styles */
+.distribution-section {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #2f3336;
+  border-radius: 16px;
+}
+
+.distribution-section h3 {
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2f3336;
+}
+
+.distribution-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.distribution-table th {
+  color: #71767b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #2f3336;
+}
+
+.distribution-table td {
+  color: #e7e9ea;
+  font-size: 0.9rem;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2f3336;
+}
+
+.distribution-table tr:last-child td {
+  border-bottom: none;
+}
+
+.distribution-table tr:hover {
+  background-color: #000000;
+}
+
+/* Discord Reward Info */
+.discord-reward-info {
+  background-color: rgba(88, 101, 242, 0.15);
+  border-left: 4px solid #5865f2;
+  padding: 12px 16px;
+  margin-top: 16px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discord-reward-label {
+  color: #5865f2;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.discord-reward-amount {
+  color: #e7e9ea;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Discord Mandatory Badge */
+.discord-mandatory-badge {
+  background-color: rgba(244, 33, 46, 0.15);
+  border: 1px solid rgba(244, 33, 46, 0.3);
+  color: #f4212e;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Required Field Indicator */
+.required-indicator {
+  color: #f4212e;
+  margin-left: 4px;
+  font-size: 1.2em;
+  line-height: 1;
+}
+
+/* Info Link */
+.info-link {
+  color: #71767b;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.info-link a {
+  color: #1d9bf0;
+  font-weight: 600;
+}
+
+.info-link a:hover {
+  text-decoration: underline;
+}
+
+/* Discord Reward Input for Admin Panel */
+.discord-reward-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discord-reward-inputs input[type="number"] {
+  width: 100%;
+  max-width: 200px;
+  padding: 12px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #e7e9ea;
+}
+
+.discord-reward-inputs input[type="number"]:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.discord-reward-inputs label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #e7e9ea;
+  font-size: 0.95rem;
+}
+
+.discord-reward-inputs input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #f4212e;
+}
