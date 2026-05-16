@@ -113,7 +113,7 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
   const hasRules = Array.isArray(rulesArray) && rulesArray.length > 0;
   
   return (
-    <Card title="Giveaway Details">
+    <Card title="About">
       {description && <p className="description">{description}</p>}
       {targetBlock && (
         <div className="info-row">
@@ -141,11 +141,11 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
           </div>
         </div>
       )}
-      {participants_count &&
+      {participants_count ?
         <div className="info-row">
           <span className="info-label">Participants</span>
           <div className="rules-badges">{ participants_count }</div>
-        </div>
+        </div> : undefined
       }
     </Card>
   );
@@ -162,18 +162,18 @@ const WinnerDistributionCard: React.FC<WinnerDistributionCardProps> = ({ parsedD
   if (parsedDistribution.length === 0) return null;
   
   return (
-    <Card title="Winner Distribution">
+    <Card title="Prizes">
       <table className="distribution-table">
         <thead>
           <tr>
-            <th>Top Rank</th>
-            <th>Prize Amount</th>
+            <th>Place</th>
+            <th>Prize</th>
           </tr>
         </thead>
         <tbody>
           {parsedDistribution.map((dist, index) => (
             <tr key={index}>
-              <td>Top {dist.count}</td>
+              <td>{(index > 0 && parsedDistribution[index - 1]?.count != dist.count - 1 ? ((parsedDistribution[index - 1]?.count || 0) + 1) + '-' : '') + dist.count}{ dist.count == 1 ? 'st' : (dist.count == 2 ? 'nd' : (dist.count == 3 ? 'rd' : 'th')) }</td>
               <td>{dist.amount} {parsedWinningToken || 'token'}</td>
             </tr>
           ))}
@@ -246,7 +246,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
   };
 
   return (
-    <Card title={isFinished ? 'Check by Wallet' : 'Check Participation'} style={{ marginTop: isFinished ? undefined : '24px' }}>
+    <Card title="Tracker" style={{ marginTop: isFinished ? undefined : '24px' }}>
       <div className="winner-check-form">
         <div className="form-group">
           <input
@@ -329,7 +329,7 @@ interface JoinFormCardProps {
 
 const JoinFormCard: React.FC<JoinFormCardProps> = ({ renderForm }) => {
   return (
-    <Card title="Join Giveaway">
+    <Card title="Participate">
       {renderForm()}
     </Card>
   );
@@ -414,7 +414,7 @@ function GiveawayPage() {
             required
           />
           <p className="info-link">
-            You can create your address over there at{' '}
+            You can create your address at{' '}
             <a href="https://tangent.cash" target="_blank" rel="noopener noreferrer">
               tangent.cash
             </a>
@@ -432,7 +432,7 @@ function GiveawayPage() {
             placeholder="@username"
           />
           <p className="info-link">
-            You must be subscribed to our account on X. Follow us at{' '}
+            You must follow us in X at{' '}
             <a href="https://x.com/tangentcash" target="_blank" rel="noopener noreferrer">
               @tangentcash
             </a>
