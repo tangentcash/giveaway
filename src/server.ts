@@ -500,6 +500,17 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
     return;
   }
 
+  const checkup = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? AND (tan_address = ? OR x_username = ? OR discord_username = ?) LIMIT 1').get(
+    id,
+    tan_address,
+    fixed_x_username || null,
+    discord_username || null
+  ) as ParticipantRow | undefined;
+  if (checkup != null) {
+    res.status(403).json({ error: 'Participant may not re-join the giveaway (duplicate)' });
+    return;
+  }
+
   const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username) VALUES (?, ?, ?, ?)').run(
     id,
     tan_address,
