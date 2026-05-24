@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
 // Helper function to hash wallet address (same as backend hashAddress)
 // Backend: createHash('sha256').update(id).update(address).digest('hex')
@@ -59,6 +60,31 @@ function ManagePage() {
   const [discordRewardAmount, setDiscordRewardAmount] = useState('');
   const [discordMandatory, setDiscordMandatory] = useState(false);
   const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => p.approved + c, 0) : 0, [data]);
+  const analyticsData = useMemo((): { date: string, day: number, total: number }[] => {
+    if (!data || !data.participants)
+      return [];
+
+    const joins: Record<string, number> = { };
+    for (let i = 0; i < data.participants.length; i++) {
+      const point = new Date(data.participants[i].created_at).toISOString().split('T')[0] || '';
+      joins[point] = joins[point] ? joins[point] + 1 : 1;
+    }
+    
+    const points: { date: string, day: number, total: number }[] = [];
+    for (let day in joins)
+      points.push({ date: day, day: joins[day] || 0, total: 0 });  
+
+    points.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    for (let i = 0; i < points.length; i++) {
+      const prev = i > 0 ? points[i - 1] : undefined;
+      const next = points[i];
+      if (next) {
+        next.total = (prev ? prev.total : 0) + next.day;
+      }
+    }
+
+    return points;
+  }, [data]);
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('admin_auth');
@@ -538,6 +564,33 @@ function ManagePage() {
             </table>
           </section>
         )}
+
+        <section className="winners-section">
+          <h3>Participants Day/Total</h3>
+          <LineChart style={{ width: '100%', aspectRatio: 1.618, maxWidth: 800, margin: 'auto' }} responsive data={analyticsData}>
+            <CartesianGrid stroke="#999" strokeDasharray="5 5" />
+            <XAxis dataKey="date" stroke="#999" />
+            <YAxis width="auto" stroke="#999" />
+            <Tooltip
+              cursor={{ stroke: '#999' }}
+              contentStyle={{ backgroundColor: '#000', borderColor: '#999' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="day"
+              stroke="#f30"
+              dot={{ fill: '#f30' }}
+              activeDot={{ stroke: '#f30' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="total"
+              stroke="#1d9bf0"
+              dot={{ fill: '#1d9bf0' }}
+              activeDot={{ stroke: '#1d9bf0' }}
+            />
+          </LineChart>
+        </section>
       </div>
     );
   };
