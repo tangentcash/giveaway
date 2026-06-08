@@ -457,8 +457,8 @@ app.get('/giveaway/:id/status/:address', (req: Request, res: Response) => {
     return;
   }
 
-  const participant = db.prepare('SELECT approved FROM participants WHERE giveaway_id = ? AND tan_address = ? LIMIT 1').get(id, address) as ParticipantRow | undefined;
-  res.json({ approved: participant ? participant.approved > 0 : null });
+  const participant = db.prepare('SELECT approved, created_at FROM participants WHERE giveaway_id = ? AND tan_address = ? LIMIT 1').get(id, address) as ParticipantRow | undefined;
+  res.json({ approved: participant ? participant.approved > 0 : null, created_at: participant ? participant.created_at : null });
 });
 
 // Submit participant info

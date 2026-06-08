@@ -1,4 +1,4 @@
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 
 // Helper function to hash wallet address (same as backend hashAddress)
@@ -200,12 +200,25 @@ interface WinnerCheckCardProps {
 }
 
 const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, parsedWinningToken, isFinished }) => {
-  const [walletAddress, setWalletAddress] = useState('');
+  const [walletAddress, setWalletAddress] = useState(localStorage.getItem('address') || '');
   const [walletHash, setWalletHash] = useState<string | null>(null);
   const [isWinner, setIsWinner] = useState<boolean | null>(null);
-  const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  const [approval, setApproval] = useState<{ approved: boolean, created_at: Date } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [earlyOut, setEarlyOut] = useState(false);
   const [prizeAmount, setPrizeAmount] = useState<number | null>(null);
+  const approvalStatus = useMemo((): 'unknown' | 'pending' | 'approved' | 'rejected' => {
+    if (!approval)
+      return 'unknown';
+
+    if (approval.approved)
+      return 'approved';
+
+    if (new Date().getTime() - approval.created_at.getTime() > 8 * 3600 * 1000)
+      return 'rejected';
+
+    return 'pending';
+  }, [approval]);
 
   const checkWinner = async () => {
     if (!walletAddress.trim()) {
@@ -218,7 +231,10 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
       try {
         const response = await fetch(`/giveaway/${giveawayId}/status/${walletAddress}`);
         const result = await response.json();
-        setIsApproved(result && typeof result.approved == 'boolean' ? result.approved : null);
+        setApproval(result && typeof result.approved == 'boolean' ? {
+          approved: result.approved,
+          created_at: new Date(result.created_at)
+        } : null);
       } catch { }
       
       const hash = await hashAddress(giveawayId, walletAddress);
@@ -244,6 +260,15 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!earlyOut) {
+      setEarlyOut(true);
+      if (walletAddress.trim().length > 0 && walletAddress.trim() == (localStorage.getItem('address') || '').trim()) {
+        checkWinner();
+      }
+    }
+  }, [earlyOut, walletAddress]);
 
   return (
     <Card title="Tracker" style={{ marginTop: isFinished ? undefined : '24px' }}>
@@ -279,7 +304,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
             <div className="winner-not">
               <span className="result-label">Wallet Hash:</span>
               <span className="wallet-hash-display">{walletHash.substring(0, 16)}<span style={{ color: 'greenyellow' }}>{walletHash.substring(16, 8)}</span></span>
-              { !isFinished && <span className="wallet-hash-display" style={{ color: isApproved ? 'greenyellow' : (isApproved === false ? 'yellow' : 'gray'), marginLeft: '8px' }}>{ isApproved ? 'You\'re IN!' : (isApproved === false ? 'Pending Approval' : 'Not Registered') }</span> }
+              { !isFinished && <span className="wallet-hash-display" style={{ color: approvalStatus == 'approved' ? 'greenyellow' : (approvalStatus == 'pending' ? 'yellow' : (approvalStatus == 'rejected' ? 'red' : 'gray')), marginLeft: '8px' }}>{ approvalStatus == 'approved' ? 'You\'re IN!' : (approvalStatus == 'pending' ? 'Pending Approval' : (approvalStatus == 'rejected' ? 'Likely Rejected: Rules' : 'Not Registered')) }</span> }
               { isFinished && <p className="not-winner-text">Sorry, you are not a winner this time.</p> }
             </div>
           ) : null}
@@ -375,6 +400,7 @@ function GiveawayPage() {
       return res.json();
     })
     .then(() => {
+      localStorage.setItem('address', tanAddress);
       alert('Successfully joined giveaway!');
       setTanAddress('');
       setXUsername('');
