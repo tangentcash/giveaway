@@ -176,7 +176,7 @@ function selectWinners(giveaway: GiveawayRow, participants: ParticipantRow[], wi
       const item = shuffledParticipants[i];
       if (item != null) {
         let individualAmount = amount;
-        if (item.discord_username && giveaway.discord_reward_amount && giveaway.discord_reward_amount > 0) {
+        if (item.discord_username && giveaway.discord_reward_amount && giveaway.discord_reward_amount > 0 && (giveaway.discord_username_mandatory || item.approved == 1)) {
           individualAmount += giveaway.discord_reward_amount;
         }
         winners.push({
@@ -370,22 +370,6 @@ db.exec(`
 
 `);
 
-// Migration: Add Discord fields to existing databases if they don't exist
-try {
-  db.exec(`
-    ALTER TABLE giveaways ADD COLUMN discord_reward_amount REAL DEFAULT 0;
-  `);
-} catch (e) {
-  // Column may already exist
-}
-try {
-  db.exec(`
-    ALTER TABLE giveaways ADD COLUMN discord_username_mandatory INTEGER DEFAULT 0;
-  `);
-} catch (e) {
-  // Column may already exist
-}
-
 // Get or create giveaway (public endpoint - no sensitive data)
 app.get('/giveaway/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -458,7 +442,7 @@ app.get('/giveaway/:id/status/:address', (req: Request, res: Response) => {
   }
 
   const participant = db.prepare('SELECT approved, created_at FROM participants WHERE giveaway_id = ? AND tan_address = ? LIMIT 1').get(id, address) as ParticipantRow | undefined;
-  res.json({ approved: participant ? participant.approved > 0 : null, created_at: participant ? participant.created_at : null });
+  res.json({ approved: participant ? participant.approved : null, created_at: participant ? participant.created_at : null });
 });
 
 // Submit participant info
@@ -703,12 +687,12 @@ app.patch('/giveaway/:id/participant/:pid', requireAdmin, (req: Request, res: Re
   const { id, pid } = req.params;
   const { action } = req.body;
 
-  if (!['approve', 'reject'].includes(action)) {
+  if (!['approve', 'partial-approve', 'reject'].includes(action)) {
     res.status(400).json({ error: 'Invalid action' });
     return;
   }
 
-  const approved = action === 'approve' ? 1 : 0;
+  const approved = action === 'approve' ? 1 : (action === 'partial-approve' ? 2 : 0);
   db.prepare('UPDATE participants SET approved = ? WHERE id = ? AND giveaway_id = ?').run(approved, pid, id);
   if (approved) {
     const participant = db.prepare('SELECT * FROM participants WHERE id = ? AND giveaway_id = ?').get(pid, id) as ParticipantRow | undefined;
@@ -740,7 +724,7 @@ app.post('/giveaway/:id/build-payout', requireAdmin, async (req: Request, res: R
     return;
   }
 
-  const approvedParticipants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? AND approved = 1').all(id) as ParticipantRow[];
+  const approvedParticipants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? AND approved > 0').all(id) as ParticipantRow[];
   if (approvedParticipants.length === 0) {
     res.status(400).json({ error: 'No approved participants' });
     return;

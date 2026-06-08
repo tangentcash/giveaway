@@ -244,8 +244,7 @@ function ManagePage() {
     });
   };
 
-  const handleToggleApproval = async (pid: number, currentApproved: boolean) => {
-    const action = currentApproved ? 'reject' : 'approve';
+  const handleToggleApproval = async (pid: number, action: 'approve' | 'partial-approve' | 'reject') => {
     try {
       await fetch(`/giveaway/${id}/participant/${pid}`, {
         method: 'PATCH',
@@ -524,13 +523,22 @@ function ManagePage() {
                     </td>
                     <td>{renderSocialLinks(p)}</td>
                     <td>
+                      <label className="approval-checkbox" style={{ marginRight: '4px' }}>
+                        <input
+                          style={{ accentColor: 'yellow' }}
+                          type="checkbox"
+                          checked={p.approved == 2}
+                          onChange={() => handleToggleApproval(p.id, p.approved == 2 ? 'reject' : 'partial-approve')}
+                        />
+                        {p.approved == 2 ? '✗' : ''}
+                      </label>
                       <label className="approval-checkbox">
                         <input
                           type="checkbox"
-                          checked={!!p.approved}
-                          onChange={() => handleToggleApproval(p.id, !!p.approved)}
+                          checked={p.approved == 1}
+                          onChange={() => handleToggleApproval(p.id, p.approved == 1 ? 'reject' : 'approve')}
                         />
-                        {p.approved ? '✓' : ''}
+                        {p.approved == 1 ? '✓' : ''}
                       </label>
                     </td>
                   </tr>
