@@ -173,7 +173,7 @@ const WinnerDistributionCard: React.FC<WinnerDistributionCardProps> = ({ parsedD
         <tbody>
           {parsedDistribution.map((dist, index) => (
             <tr key={index}>
-              <td>{(index > 0 && parsedDistribution[index - 1]?.count != dist.count - 1 ? ((parsedDistribution[index - 1]?.count || 0) + 1) + '-' : '') + dist.count}{ dist.count == 1 ? 'st' : (dist.count == 2 ? 'nd' : (dist.count == 3 ? 'rd' : 'th')) }</td>
+              <td>{(index > 0 && parsedDistribution[index - 1]?.count != dist.count - 1 ? ((parsedDistribution[index - 1]?.count || 0) + 1) + '-' : (dist.count > 1 ? '1-' : '')) + dist.count}{ dist.count == 1 ? 'st' : (dist.count == 2 ? 'nd' : (dist.count == 3 ? 'rd' : 'th')) }</td>
               <td>{dist.amount} {parsedWinningToken || 'token'}</td>
             </tr>
           ))}
