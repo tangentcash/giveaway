@@ -324,16 +324,15 @@ function ManagePage() {
     
     if (p.discord_username) {
       links.push(
-        <a 
+        <button 
           key="discord"
-          href={`https://discord.com/users/${p.discord_username}`} 
-          target="_blank" 
-          rel="noopener noreferrer"
           className="social-badge discord"
-          title={`Discord: ${p.discord_username}`}
-        >
+          onClick={() => {
+            navigator.clipboard.writeText(p.discord_username);
+            alert('Copied to clipboard!')
+          }}>
           💬 {p.discord_username}
-        </a>
+        </button>
       );
     }
     

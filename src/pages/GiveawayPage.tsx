@@ -183,7 +183,7 @@ const WinnerDistributionCard: React.FC<WinnerDistributionCardProps> = ({ parsedD
         <div className="discord-reward-info">
           <span className="discord-reward-label">💬 Join Discord Reward</span>
           <span className="discord-reward-amount">
-            {discordRewardAmount} {parsedWinningToken || 'token'} additional prize for providing your Discord username
+            Plus {discordRewardAmount} {parsedWinningToken || 'token'} for joining our Discord!
           </span>
         </div>
       )}
