@@ -524,7 +524,7 @@ function ManagePage() {
                     <td>{renderSocialLinks(p)}</td>
                     <td>
                       {
-                        !data.discord_username_mandatory && data.discord_reward_amount && data.discord_reward_amount > 0 &&
+                        !data.discord_username_mandatory && data.discord_reward_amount && data.discord_reward_amount > 0 && p.discord_username &&
                         <label className="approval-checkbox" style={{ marginRight: '4px' }}>
                           <input
                             style={{ accentColor: 'yellow' }}
