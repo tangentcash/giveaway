@@ -442,7 +442,8 @@ app.get('/giveaway/:id/status/:address', (req: Request, res: Response) => {
   }
 
   const participant = db.prepare('SELECT approved, created_at FROM participants WHERE giveaway_id = ? AND tan_address = ? LIMIT 1').get(id, address) as ParticipantRow | undefined;
-  res.json({ approved: participant ? participant.approved : null, created_at: participant ? participant.created_at : null });
+  const silentlyRejected = participant ? participant.approved == 0 && new Date().getTime() - new Date(participant.created_at).getTime() > 8 * 3600 * 1000 : false;
+  res.json({ approved: participant ? (silentlyRejected ? 1 : participant.approved) : null });
 });
 
 // Submit participant info

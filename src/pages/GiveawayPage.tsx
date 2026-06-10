@@ -203,19 +203,16 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
   const [walletAddress, setWalletAddress] = useState(localStorage.getItem('address') || '');
   const [walletHash, setWalletHash] = useState<string | null>(null);
   const [isWinner, setIsWinner] = useState<boolean | null>(null);
-  const [approval, setApproval] = useState<{ approved: number, created_at: Date } | null>(null);
+  const [approval, setApproval] = useState<{ approved: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [earlyOut, setEarlyOut] = useState(false);
   const [prizeAmount, setPrizeAmount] = useState<number | null>(null);
-  const approvalStatus = useMemo((): 'unknown' | 'pending' | 'partially-approved' | 'approved' | 'rejected' => {
+  const approvalStatus = useMemo((): 'unknown' | 'pending' | 'partially-approved' | 'approved' => {
     if (!approval)
       return 'unknown';
 
     if (approval.approved)
       return approval.approved == 1 ? 'approved' : 'partially-approved';
-
-    if (new Date().getTime() - approval.created_at.getTime() > 8 * 3600 * 1000)
-      return 'rejected';
 
     return 'pending';
   }, [approval]);
@@ -232,8 +229,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
         const response = await fetch(`/giveaway/${giveawayId}/status/${walletAddress}`);
         const result = await response.json();
         setApproval(result && typeof result.approved == 'number' ? {
-          approved: result.approved,
-          created_at: new Date(result.created_at)
+          approved: result.approved
         } : null);
       } catch { }
       
@@ -304,7 +300,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
             <div className="winner-not">
               <span className="result-label">Wallet Hash:</span>
               <span className="wallet-hash-display">{walletHash.substring(0, 16)}<span style={{ color: 'greenyellow' }}>{walletHash.substring(16, 8)}</span></span>
-              { !isFinished && <span className="wallet-hash-display" style={{ color: approvalStatus == 'approved' ? 'greenyellow' : (approvalStatus == 'partially-approved' || approvalStatus == 'pending' ? 'yellow' : (approvalStatus == 'rejected' ? 'red' : 'gray')), marginLeft: '8px' }}>{ approvalStatus == 'approved' ? 'You\'re IN!' : (approvalStatus == 'partially-approved' ? 'You\'re partially IN!' : (approvalStatus == 'pending' ? 'Pending Approval' : (approvalStatus == 'rejected' ? 'Likely Rejected: Rules' : 'Not Registered'))) }</span> }
+              { !isFinished && <span className="wallet-hash-display" style={{ color: approvalStatus == 'approved' ? 'greenyellow' : (approvalStatus == 'partially-approved' || approvalStatus == 'pending' ? 'yellow' : 'gray'), marginLeft: '8px' }}>{ approvalStatus == 'approved' ? 'You\'re IN!' : (approvalStatus == 'partially-approved' ? 'You\'re partially IN!' : (approvalStatus == 'pending' ? 'Pending Approval' : 'Not Registered')) }</span> }
               { isFinished && <p className="not-winner-text">Sorry, you are not a winner this time.</p> }
             </div>
           ) : null}
