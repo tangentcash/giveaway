@@ -85,6 +85,36 @@ function ManagePage() {
 
     return points;
   }, [data]);
+  const participants = useMemo(() => {
+    const mapping: Record<string, number[]> = { };
+    const preprocess = (value: string) => value.trim().toLowerCase().replace(/[^a-z]/g, '');
+    const results = (data?.participants || []).map((x, index) => {
+      const xUsername = x.x_username ? preprocess(x.x_username) : null;
+      const discordUsername = x.discord_username ? preprocess(x.discord_username) : null;
+      if (xUsername) {
+        mapping[xUsername] = [...(mapping[xUsername] || []), index];
+      }
+      if (discordUsername && (!xUsername || xUsername != discordUsername)) {
+        mapping[discordUsername] = [...(mapping[discordUsername] || []), index];
+      }
+      return {
+        ...x,
+        duplicates: 0
+      }
+    });
+    for (let index in mapping) {
+      const indices = mapping[index];
+      if (indices && Array.isArray(indices) && indices.length > 1) {
+        for (let i = 0; i < indices.length; i++) {
+          const id = indices[i];
+          if (typeof id == 'number' && results[id].approved > 0) {
+            results[id].duplicates = indices.length - 1;
+          }
+        }
+      }
+    }
+    return results;
+  }, [data]);
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('admin_auth');
@@ -314,6 +344,7 @@ function ManagePage() {
           target="_blank" 
           rel="noopener noreferrer"
           className="social-badge twitter"
+          style={p.duplicates ? { backgroundColor: p.duplicates > 1 ? 'red' : 'darkred' } : undefined}
           title={`X: @${handle}`}
         >
           ✖ @{handle}
@@ -326,6 +357,7 @@ function ManagePage() {
         <button 
           key="discord"
           className="social-badge discord"
+          style={p.duplicates ? { backgroundColor: p.duplicates > 1 ? 'red' : 'darkred' } : undefined}
           onClick={() => {
             navigator.clipboard.writeText(p.discord_username);
             alert('Copied to clipboard!')
@@ -366,7 +398,6 @@ function ManagePage() {
     if (!data) return <div className="no-giveaway">Giveaway not found.</div>;
 
     // Ensure participants is always an array for the admin panel
-    const participants = data.participants || [];
     const parsedWinningToken = data.parsed_winning_token || null;
 
     return (
