@@ -59,7 +59,8 @@ function ManagePage() {
   const [rangeIdCounter, setRangeIdCounter] = useState(0);
   const [discordRewardAmount, setDiscordRewardAmount] = useState('');
   const [discordMandatory, setDiscordMandatory] = useState(false);
-  const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => p.approved + c, 0) : 0, [data]);
+  const [botFilter, setBotFilter] = useState(false);
+  const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => (p.approved > 0 ? 1 : 0) + c, 0) : 0, [data]);
   const analyticsData = useMemo((): { date: string, dayAll: number, totalAll: number, dayUnique: number, totalUnique: number }[] => {
     if (!data || !data.participants)
       return [];
@@ -114,14 +115,14 @@ function ManagePage() {
       if (indices && Array.isArray(indices) && indices.length > 1) {
         for (let i = 0; i < indices.length; i++) {
           const id = indices[i];
-          if (typeof id == 'number' && results[id].approved > 0) {
+          if (typeof id == 'number') {
             results[id].duplicates = indices.length - 1;
           }
         }
       }
     }
-    return results;
-  }, [data]);
+    return botFilter ? results.filter((x: any) => !x.duplicates) : results;
+  }, [data, botFilter]);
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('admin_auth');
@@ -351,7 +352,7 @@ function ManagePage() {
           target="_blank" 
           rel="noopener noreferrer"
           className="social-badge twitter"
-          style={p.duplicates ? { backgroundColor: p.duplicates > 1 ? 'red' : 'darkred' } : undefined}
+          style={p.duplicates ? { backgroundColor: p.approved > 0 ? 'red' : '#101010' } : undefined}
           title={`X: @${handle}`}
         >
           ✖ @{handle}
@@ -364,7 +365,7 @@ function ManagePage() {
         <button 
           key="discord"
           className="social-badge discord"
-          style={p.duplicates ? { backgroundColor: p.duplicates > 1 ? 'red' : 'darkred' } : undefined}
+          style={p.duplicates ? { backgroundColor: p.approved > 0 ? 'red' : '#101010' } : undefined}
           onClick={() => {
             navigator.clipboard.writeText(p.discord_username);
             alert('Copied to clipboard!')
@@ -555,7 +556,7 @@ function ManagePage() {
                 {participants.map((p: any) => (
                   <tr key={p.id}>
                     <td className="wallet-cell">
-                      <a href={`https://tangent.cash/account/${p.tan_address}`} target="_blank" rel="noopener noreferrer">
+                      <a href={`https://tangent.cash/account/${p.tan_address}`} target="_blank" rel="noopener noreferrer" style={p.duplicates ? { color: p.approved > 0 ? 'red' : 'gray' } : undefined}>
                         {p.winner ? `#${p.winner} 🎁 ${p.tan_address.substring(0, 10)}`  : p.tan_address.substring(0, 16)}...
                       </a>
                     </td>
@@ -587,6 +588,17 @@ function ManagePage() {
               </tbody>
             </table>
           )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px' }}>
+            <p style={{ padding: 0, color: 'white' }}>{ botFilter ? 'Showing unique entries' : 'Showing all entries' }</p>
+            <label className="approval-checkbox">
+              <input
+                type="checkbox"
+                checked={botFilter}
+                onChange={() => setBotFilter(!botFilter)}
+              />
+              {botFilter ? '✓' : ''}
+            </label>
+          </div>
         </section>
 
         {data.winners.length > 0 && (
