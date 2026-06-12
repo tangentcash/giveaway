@@ -363,6 +363,7 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
   );
+  CREATE INDEX IF NOT EXISTS participants_ip ON participants (ip);				
 
   CREATE TABLE IF NOT EXISTS cache (
     path TEXT PRIMARY KEY,
@@ -526,7 +527,7 @@ app.get('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
     return;
   }
 
-  const participants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? ORDER BY created_at ASC').all(id) as ParticipantRow[];
+  const participants = db.prepare('SELECT *, (SELECT COUNT(1) FROM participants p WHERE p.ip = participants.ip AND p.giveaway_id = participants.giveaway_id) AS ips FROM participants WHERE giveaway_id = ? ORDER BY created_at ASC').all(id) as ParticipantRow[];
   
   // Calculate winners on-the-fly if giveaway is finished
   let winners: any[] = [];

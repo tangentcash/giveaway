@@ -60,26 +60,30 @@ function ManagePage() {
   const [discordRewardAmount, setDiscordRewardAmount] = useState('');
   const [discordMandatory, setDiscordMandatory] = useState(false);
   const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => p.approved + c, 0) : 0, [data]);
-  const analyticsData = useMemo((): { date: string, day: number, total: number }[] => {
+  const analyticsData = useMemo((): { date: string, dayAll: number, totalAll: number, dayUnique: number, totalUnique: number }[] => {
     if (!data || !data.participants)
       return [];
 
-    const joins: Record<string, number> = { };
+    const joins: Record<string, { total: number, unique: number }> = { };
     for (let i = 0; i < data.participants.length; i++) {
       const point = new Date(data.participants[i].created_at).toISOString().split('T')[0] || '';
-      joins[point] = joins[point] ? joins[point] + 1 : 1;
+      joins[point] = {
+        total: (joins[point]?.total || 0) + 1,
+        unique: (joins[point]?.unique || 0) + ((data.participants[i].ips || 0) <= 1 ? 1 : 0),
+      };
     }
     
-    const points: { date: string, day: number, total: number }[] = [];
+    const points: { date: string, dayAll: number, totalAll: number, dayUnique: number, totalUnique: number }[] = [];
     for (let day in joins)
-      points.push({ date: day, day: joins[day] || 0, total: 0 });  
+      points.push({ date: day, dayAll: joins[day]?.total || 0, totalAll: 0, dayUnique: joins[day]?.unique || 0, totalUnique: 0 });  
 
     points.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     for (let i = 0; i < points.length; i++) {
       const prev = i > 0 ? points[i - 1] : undefined;
       const next = points[i];
       if (next) {
-        next.total = (prev ? prev.total : 0) + next.day;
+        next.totalUnique = (prev ? prev.totalUnique : 0) + next.dayUnique;
+        next.totalAll = (prev ? prev.totalAll : 0) + next.dayAll;
       }
     }
 
@@ -610,7 +614,7 @@ function ManagePage() {
         )}
 
         <section className="winners-section">
-          <h3>Participants Day/Total</h3>
+          <h3>Participants Day/Total (All)</h3>
           <LineChart style={{ width: '100%', aspectRatio: 1.618, maxWidth: 800, margin: 'auto' }} responsive data={analyticsData}>
             <CartesianGrid stroke="#999" strokeDasharray="5 5" />
             <XAxis dataKey="date" stroke="#999" />
@@ -621,17 +625,41 @@ function ManagePage() {
             />
             <Line
               type="monotone"
-              dataKey="day"
+              dataKey="dayAll"
               stroke="#f30"
               dot={{ fill: '#f30' }}
               activeDot={{ stroke: '#f30' }}
             />
             <Line
               type="monotone"
-              dataKey="total"
-              stroke="#1d9bf0"
-              dot={{ fill: '#1d9bf0' }}
-              activeDot={{ stroke: '#1d9bf0' }}
+              dataKey="totalAll"
+              stroke="rgb(179, 255, 0)"
+              dot={{ fill: 'rgb(179, 255, 0)' }}
+              activeDot={{ stroke: 'rgb(179, 255, 0)' }}
+            />
+          </LineChart>
+          <h3 style={{ marginTop: '32px' }}>Participants Day/Total (Unique)</h3>
+          <LineChart style={{ width: '100%', aspectRatio: 1.618, maxWidth: 800, margin: 'auto' }} responsive data={analyticsData}>
+            <CartesianGrid stroke="#999" strokeDasharray="5 5" />
+            <XAxis dataKey="date" stroke="#999" />
+            <YAxis width="auto" stroke="#999" />
+            <Tooltip
+              cursor={{ stroke: '#999' }}
+              contentStyle={{ backgroundColor: '#000', borderColor: '#999' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="dayUnique"
+              stroke="#f30"
+              dot={{ fill: '#f30' }}
+              activeDot={{ stroke: '#f30' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="totalUnique"
+              stroke="rgb(179, 255, 0)"
+              dot={{ fill: 'rgb(179, 255, 0)' }}
+              activeDot={{ stroke: 'rgb(179, 255, 0)' }}
             />
           </LineChart>
         </section>
