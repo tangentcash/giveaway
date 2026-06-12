@@ -30,6 +30,7 @@ type ParticipantRow = {
   tan_address: string;
   x_username: string | null;
   discord_username: string | null;
+  ip: string | null,
   approved: number;
   created_at: string;
 };
@@ -357,6 +358,7 @@ db.exec(`
     tan_address TEXT,
     x_username TEXT,
     discord_username TEXT,
+    ip TEXT DEFAULT NULL,
     approved INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
@@ -451,6 +453,7 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
   const { id } = req.params;
   const { tan_address, x_username, discord_username } = req.body;
 
+  const ip = req.get('X-Real-IP') || req.get('X-Forwarded-For') || req.ip;
   const fixed_x_username = x_username ? (x_username.startsWith('@') ? x_username : '@' + x_username) : '';
   const escaped_x_username = fixed_x_username.substring(1);
   if (!tan_address || !checkAddress(tan_address)) {
@@ -496,11 +499,12 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
     return;
   }
 
-  const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username) VALUES (?, ?, ?, ?)').run(
+  const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username, ip) VALUES (?, ?, ?, ?, ?)').run(
     id,
     tan_address,
     fixed_x_username || null,
-    discord_username || null
+    discord_username || null,
+    ip || null
   );
 
   const participant = db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid) as ParticipantRow;

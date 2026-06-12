@@ -97,6 +97,9 @@ function ManagePage() {
       if (discordUsername && (!xUsername || xUsername != discordUsername)) {
         mapping[discordUsername] = [...(mapping[discordUsername] || []), index];
       }
+      if (x.ip) {
+        mapping[x.ip] = [...(mapping[x.ip] || []), index];
+      }
       return {
         ...x,
         duplicates: 0
