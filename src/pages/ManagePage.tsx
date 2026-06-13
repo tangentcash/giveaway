@@ -25,6 +25,7 @@ interface GiveawayData {
   winner_ranges?: string | { count: number; amount: number }[];
   discord_reward_amount?: number;
   discord_username_mandatory?: number;
+  x_username_mandatory?: number;
   finished_at?: string;
   participants?: any[];
   winners: any[];
@@ -59,6 +60,7 @@ function ManagePage() {
   const [rangeIdCounter, setRangeIdCounter] = useState(0);
   const [discordRewardAmount, setDiscordRewardAmount] = useState('');
   const [discordMandatory, setDiscordMandatory] = useState(false);
+  const [xMandatory, setXMandatory] = useState(true);
   const [botFilter, setBotFilter] = useState(false);
   const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => (p.approved > 0 ? 1 : 0) + c, 0) : 0, [data]);
   const analyticsData = useMemo((): { date: string, dayAll: number, totalAll: number, dayUnique: number, totalUnique: number }[] => {
@@ -175,6 +177,7 @@ function ManagePage() {
       // Sync Discord reward settings
       setDiscordRewardAmount((data.discord_reward_amount?.toString()) || '');
       setDiscordMandatory(!!data.discord_username_mandatory);
+      setXMandatory(!!data.x_username_mandatory);
     }
   }, [data]);
 
@@ -270,7 +273,8 @@ function ManagePage() {
         winning_token: winningToken || null,
         winner_ranges: parsedWinnerRanges,
         discord_reward_amount: discordRewardAmountValue,
-        discord_username_mandatory: discordMandatory
+        discord_username_mandatory: discordMandatory,
+        x_username_mandatory: xMandatory
       })
     })
     .then(() => {
@@ -501,19 +505,18 @@ function ManagePage() {
               </div>
             )}
           </div>
-
           <div className="form-group">
-            <label>Discord Username Reward</label>
+            <label>Social Links Rules</label>
             <div className="discord-reward-inputs">
-              <input
-                type="number"
-                placeholder="Reward amount"
-                value={discordRewardAmount}
-                onChange={(e) => setDiscordRewardAmount(e.target.value)}
-                min="0"
-                step="any"
-                style={{ width: '150px' }}
-              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={xMandatory}
+                  onChange={(e) => setXMandatory(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                Make X username mandatory
+              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="checkbox"
@@ -524,9 +527,21 @@ function ManagePage() {
                 Make Discord username mandatory
               </label>
             </div>
-            <small style={{ display: 'block', marginTop: '8px', color: '#71767b' }}>
-              Additional reward for winners who provide their Discord username. This amount will be added to their prize.
-            </small>
+          </div>
+
+          <div className="form-group">
+            <label>Optional Discord Reward</label>
+            <div className="discord-reward-inputs">
+              <input
+                type="number"
+                placeholder="Reward amount"
+                value={discordRewardAmount}
+                onChange={(e) => setDiscordRewardAmount(e.target.value)}
+                min="0"
+                step="any"
+                style={{ width: '150px' }}
+              />
+            </div>
           </div>
 
           <div className="actions-row">

@@ -20,6 +20,7 @@ type GiveawayRow = {
   winner_ranges: string | null;
   discord_reward_amount: number;
   discord_username_mandatory: number;
+  x_username_mandatory: number;
   created_at: string;
   finished_at: string | null;
 };
@@ -348,6 +349,7 @@ db.exec(`
     winner_ranges TEXT,
     discord_reward_amount REAL DEFAULT 0,
     discord_username_mandatory INTEGER DEFAULT 0,
+    x_username_mandatory INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     finished_at DATETIME
   );
@@ -396,7 +398,7 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
 
   // Calculate winners on-the-fly if giveaway is finished
   // Note: We do NOT include participants list for privacy
-  let winners: any[] = [];
+  let winners: any[] = [], actualParticipants = -1;
   if (giveaway.finished_at && giveaway.target_block && giveaway.winner_ranges) {
     try {
       // Only fetch participants needed for winner calculation (for admin use only)
@@ -411,6 +413,7 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
           amount: w.amount,
           walletHash: hashAddress(giveaway.id, w.participant.tan_address)
         }));
+        actualParticipants = allParticipants.reduce((a, b) => a + (b.approved > 0 ? 1 : 0), 0);
       }
     } catch (error) {
       console.error('Error calculating winners:', error);
@@ -430,8 +433,9 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
     winner_ranges: giveaway.winner_ranges,
     discord_reward_amount: giveaway.discord_reward_amount,
     discord_username_mandatory: giveaway.discord_username_mandatory,
+    x_username_mandatory: giveaway.x_username_mandatory,
     finished_at: giveaway.finished_at,
-    participants_count: giveaway.participants,
+    participants_count: actualParticipants >= 0 ? actualParticipants : giveaway.participants,
     winners: winners
   });
 });
@@ -455,13 +459,8 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
   const { tan_address, x_username, discord_username } = req.body;
 
   const ip = req.get('X-Real-IP') || req.get('X-Forwarded-For') || req.ip;
-  const fixed_x_username = x_username ? (x_username.startsWith('@') ? x_username : '@' + x_username) : '';
-  const escaped_x_username = fixed_x_username.substring(1);
   if (!tan_address || !checkAddress(tan_address)) {
     res.status(400).json({ error: 'Invalid TAN address' });
-    return;
-  } else if (!escaped_x_username || escaped_x_username.length < 4 || escaped_x_username.length > 15 || !/^[A-Za-z0-9_]+$/.test(escaped_x_username)) {
-    res.status(400).json({ error: 'Invalid X username' });
     return;
   }
 
@@ -478,22 +477,38 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
       winner_ranges: null,
       discord_reward_amount: 0,
       discord_username_mandatory: 0,
+      x_username_mandatory: 1,
       created_at: new Date().toISOString(),
       finished_at: null
     };
   }
 
   // Validate Discord username if mandatory
-  if (giveaway.discord_username_mandatory && !discord_username) {
-    res.status(400).json({ error: 'Discord username is required for this giveaway' });
+  const fixed_discord_username: string = discord_username ? (discord_username.startsWith('@') ? discord_username : '@' + discord_username) : '';
+  const escaped_discord_username = fixed_discord_username.substring(1);
+  if (giveaway.discord_username_mandatory && (!escaped_discord_username || escaped_discord_username.length < 2 || escaped_discord_username.length > 32 || !/^[A-Za-z0-9_]+$/.test(escaped_discord_username))) {
+    if (escaped_discord_username && /^[a-z0-9]([a-z0-9_]{0,30}[a-z0-9])?#\d{4}$/i.test(escaped_discord_username)) {
+      res.status(400).json({ error: 'Legacy Discord usernames are not supported' });
+    } else {
+      res.status(400).json({ error: 'Invalid Discord username' });
+    }
     return;
   }
 
+  const fixed_x_username: string = x_username ? (x_username.startsWith('@') ? x_username : '@' + x_username) : '';
+  const escaped_x_username = fixed_x_username.substring(1);
+  if (giveaway.x_username_mandatory && (!escaped_x_username || escaped_x_username.length < 4 || escaped_x_username.length > 15 || !/^[A-Za-z0-9_]+$/.test(escaped_x_username))) {
+    res.status(400).json({ error: 'Invalid X username' });
+    return;
+  }
+
+  const final_x_username = fixed_x_username?.toLowerCase() || null;
+  const final_discord_username = escaped_discord_username?.toLowerCase() || null;
   const checkup = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? AND (tan_address = ? OR x_username = ? OR discord_username = ?) LIMIT 1').get(
     id,
     tan_address,
-    fixed_x_username || null,
-    discord_username || null
+    final_x_username || null,
+    final_discord_username || null
   ) as ParticipantRow | undefined;
   if (checkup != null) {
     res.status(403).json({ error: 'Participant may not re-join the giveaway (duplicate)' });
@@ -503,8 +518,8 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
   const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username, ip) VALUES (?, ?, ?, ?, ?)').run(
     id,
     tan_address,
-    fixed_x_username || null,
-    discord_username || null,
+    final_x_username || null,
+    final_discord_username || null,
     ip || null
   );
 
@@ -670,10 +685,13 @@ app.put('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
   const discordUsernameMandatory = req.body.discord_username_mandatory !== undefined && req.body.discord_username_mandatory !== null
     ? req.body.discord_username_mandatory ? 1 : 0
     : null;
+  const xUsernameMandatory = req.body.x_username_mandatory !== undefined && req.body.x_username_mandatory !== null
+    ? req.body.x_username_mandatory ? 1 : 0
+    : null;
 
   db.prepare(`
     UPDATE giveaways
-    SET description = ?, rules = ?, target_block = ?, winning_token = ?, winner_ranges = ?, discord_reward_amount = ?, discord_username_mandatory = ?, finished_at = ${finishedAtValue}
+    SET description = ?, rules = ?, target_block = ?, winning_token = ?, winner_ranges = ?, discord_reward_amount = ?, discord_username_mandatory = ?, x_username_mandatory = ?, finished_at = ${finishedAtValue}
     WHERE id = ?
   `).run(
     description || null,
@@ -683,6 +701,7 @@ app.put('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
     winner_ranges !== undefined && winner_ranges !== null ? (typeof winner_ranges === 'string' ? winner_ranges : JSON.stringify(winner_ranges)) : null,
     discordRewardAmount !== null ? discordRewardAmount : null,
     discordUsernameMandatory !== null ? discordUsernameMandatory : null,
+    xUsernameMandatory !== null ? xUsernameMandatory : null,
     id
   );
 

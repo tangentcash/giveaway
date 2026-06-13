@@ -59,6 +59,7 @@ interface GiveawayData {
   winner_ranges?: string;
   discord_reward_amount?: number;
   discord_username_mandatory?: number;
+  x_username_mandatory?: number;
   finished_at?: string;
   participants_count: number;
   winners: any[];
@@ -104,33 +105,27 @@ interface GiveawayDescriptionCardProps {
   parsedWinningToken?: string | undefined;
   participants_count?: number,
   rules?: any;
+  parsedDistribution: WinnerDistribution[];
+  discordRewardAmount?: string | undefined
 }
 
-const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ description, targetBlock, isFinished, winningToken, rules, participants_count }) => {
+const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ description, targetBlock, isFinished, winningToken, parsedWinningToken, rules, participants_count, parsedDistribution, discordRewardAmount }) => {
   if (!description && !targetBlock && !winningToken) return null;
   
   const rulesArray = Array.isArray(rules) ? rules : typeof rules === 'string' ? JSON.parse(rules) : [];
   const hasRules = Array.isArray(rulesArray) && rulesArray.length > 0;
   
   return (
-    <Card title="About">
+    <Card title="Rules">
       {description && <p className="description">{description}</p>}
-      {targetBlock && (
-        <div className="info-row">
-          <span className="info-label">Target Block</span>
-          <div className="info-value-with-badge">
-            <a className="info-value" href={`https://tangent.cash/block/${targetBlock}`} target="_blank" style={{ color: '#7CACF8' }}>{targetBlock}</a>
-            <span className={`status-badge ${isFinished ? 'status-finished' : 'status-active'}`}>
-              {isFinished ? 'Block found / Finished' : 'Awaiting block / Active'}
-            </span>
-          </div>
-        </div>
-      )}
-      {hasRules && (
-        <div className="info-row">
-          <span className="info-label">Rules</span>
+      {(targetBlock || hasRules) && (
+        <div className="info-row" style={{ borderBottom: 'none', paddingTop: '16px', paddingBottom: 0 }}>
           <div className="rules-badges">
-            {rulesArray.map((rule: string, index: number) => {
+            {
+              targetBlock &&
+              <a className="rule-badge" href={`https://tangent.cash/block/${targetBlock}`} target="_blank" style={{ color: isFinished ? '#f4212e' : '#00ba7c' }}>{isFinished ? 'Finished at Block' : 'Ends at Block'} { targetBlock }</a>
+            }
+            {hasRules && rulesArray.map((rule: string, index: number) => {
               const data = parseEmbeddedURL(rule);
               return data ? (
                 <a key={index} className="rule-badge" href={data.url} target="_blank" style={{ color: '#7CACF8' }}>{data.modifiedText}</a>
@@ -141,44 +136,6 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
           </div>
         </div>
       )}
-      {participants_count ?
-        <div className="info-row">
-          <span className="info-label">Participants</span>
-          <div className="rules-badges">{ participants_count }</div>
-        </div> : undefined
-      }
-    </Card>
-  );
-};
-
-// Winner Distribution Card
-interface WinnerDistributionCardProps {
-  parsedDistribution: WinnerDistribution[];
-  parsedWinningToken?: string | undefined;
-  discordRewardAmount?: string | undefined
-}
-
-const WinnerDistributionCard: React.FC<WinnerDistributionCardProps> = ({ parsedDistribution, parsedWinningToken, discordRewardAmount }) => {
-  if (parsedDistribution.length === 0) return null;
-  
-  return (
-    <Card title="Prizes">
-      <table className="distribution-table">
-        <thead>
-          <tr>
-            <th>Place</th>
-            <th>Prize</th>
-          </tr>
-        </thead>
-        <tbody>
-          {parsedDistribution.map((dist, index) => (
-            <tr key={index}>
-              <td>{(index > 0 && parsedDistribution[index - 1]?.count != dist.count - 1 ? ((parsedDistribution[index - 1]?.count || 0) + 1) + '-' : (dist.count > 1 ? '1-' : '')) + dist.count}{ dist.count == 1 ? 'st' : (dist.count == 2 ? 'nd' : (dist.count == 3 ? 'rd' : 'th')) }</td>
-              <td>{dist.amount} {parsedWinningToken || 'token'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
       {discordRewardAmount && (
         <div className="discord-reward-info">
           <span className="discord-reward-label">💬 Join Discord Reward</span>
@@ -187,6 +144,30 @@ const WinnerDistributionCard: React.FC<WinnerDistributionCardProps> = ({ parsedD
           </span>
         </div>
       )}
+      {
+        parsedDistribution.length > 0 &&
+        <div style={{ paddingTop: '16px' }}>
+          <table className="distribution-table">
+            <thead>
+              <tr>
+                <th>Place</th>
+                <th>Prize</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parsedDistribution.map((dist, index) => (
+                <tr key={index}>
+                  <td>{(index > 0 && parsedDistribution[index - 1]?.count != dist.count - 1 ? ((parsedDistribution[index - 1]?.count || 0) + 1) + '-' : (dist.count > 1 ? '1-' : '')) + dist.count}{ dist.count == 1 ? 'st' : (dist.count == 2 ? 'nd' : (dist.count == 3 ? 'rd' : 'th')) }</td>
+                  <td>{dist.amount} {parsedWinningToken || 'token'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      }
+      {!isFinished && participants_count ?
+        <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.9rem', borderTop: '1px solid #2f3336' }}>{participants_count} { participants_count > 1 ? 'requests' : 'request'} to participate</p> : undefined
+      }
     </Card>
   );
 };
@@ -197,15 +178,15 @@ interface WinnerCheckCardProps {
   winners: any[];
   parsedWinningToken?: string | undefined;
   isFinished: boolean
+  overriderAddress: string
 }
 
-const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, parsedWinningToken, isFinished }) => {
-  const [walletAddress, setWalletAddress] = useState(localStorage.getItem('address') || '');
+const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, parsedWinningToken, isFinished, overriderAddress }) => {
+  const [walletAddress, setWalletAddress] = useState('');
   const [walletHash, setWalletHash] = useState<string | null>(null);
   const [isWinner, setIsWinner] = useState<boolean | null>(null);
   const [approval, setApproval] = useState<{ approved: number } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [earlyOut, setEarlyOut] = useState(false);
   const [prizeAmount, setPrizeAmount] = useState<number | null>(null);
   const approvalStatus = useMemo((): 'unknown' | 'pending' | 'partially-approved' | 'approved' => {
     if (!approval)
@@ -217,8 +198,9 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
     return 'pending';
   }, [approval]);
 
-  const checkWinner = async () => {
-    if (!walletAddress.trim()) {
+  const checkWinner = async (customAddress?: string) => {
+    const address = customAddress || walletAddress;
+    if (!address.trim()) {
       alert('Please enter a wallet address');
       return;
     }
@@ -226,14 +208,14 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
     setLoading(true);
     try {
       try {
-        const response = await fetch(`/giveaway/${giveawayId}/status/${walletAddress}`);
+        const response = await fetch(`/giveaway/${giveawayId}/status/${address}`);
         const result = await response.json();
         setApproval(result && typeof result.approved == 'number' ? {
           approved: result.approved
         } : null);
       } catch { }
       
-      const hash = await hashAddress(giveawayId, walletAddress);
+      const hash = await hashAddress(giveawayId, address);
       setWalletHash(hash);
 
       // Check if this hash matches any winner
@@ -258,30 +240,27 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
   };
 
   useEffect(() => {
-    if (!earlyOut) {
-      setEarlyOut(true);
-      if (walletAddress.trim().length > 0 && walletAddress.trim() == (localStorage.getItem('address') || '').trim()) {
-        checkWinner();
-      }
+    if (overriderAddress) {
+      checkWinner(overriderAddress);
     }
-  }, [earlyOut, walletAddress]);
+  }, [overriderAddress]);
 
   return (
-    <Card title="Tracker" style={{ marginTop: isFinished ? undefined : '24px' }}>
+    <Card title="Check" style={{ marginTop: isFinished ? undefined : '24px' }}>
       <div className="winner-check-form">
         <div className="form-group">
           <input
             type="text"
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
-            placeholder="Enter your Tangent address"
+            placeholder={ overriderAddress || 'Enter your Tangent address' }
             disabled={loading}
           />
         </div>
         <button
           type="button"
           className="check-btn"
-          onClick={checkWinner}
+          onClick={() => checkWinner()}
           disabled={loading || !walletAddress}
         >
           {loading ? 'Checking...' : 'Check if ' + (isFinished ? 'I Won' : 'I\'m In')}
@@ -314,13 +293,14 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
 interface WinnersCardProps {
   winners: any[];
   parsedWinningToken?: string | undefined;
+  participants_count: number
 }
 
-const WinnersCard: React.FC<WinnersCardProps> = ({ winners, parsedWinningToken }) => {
+const WinnersCard: React.FC<WinnersCardProps> = ({ winners, parsedWinningToken, participants_count }) => {
   if (winners.length === 0) return null;
   
   return (
-    <Card title="🔥 Giveaway Winners">
+    <Card title="🔥 Winners">
       <table className="winners-table">
         <thead>
           <tr>
@@ -339,6 +319,9 @@ const WinnersCard: React.FC<WinnersCardProps> = ({ winners, parsedWinningToken }
           ))}
         </tbody>
       </table>
+      {participants_count ?
+        <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '1rem', borderTop: '1px solid #2f3336' }}>{participants_count} { participants_count > 1 ? 'participants' : 'participant'} total</p> : undefined
+      }
     </Card>
   );
 };
@@ -418,6 +401,7 @@ function GiveawayPage() {
   const renderForm = () => {
     if (!data) return null;
     
+    const isXMandatory = data.x_username_mandatory === 1;
     const isDiscordMandatory = data.discord_username_mandatory === 1;
     const hasDiscordReward = data.discord_reward_amount && data.discord_reward_amount > 0;
     
@@ -425,7 +409,7 @@ function GiveawayPage() {
       <form onSubmit={handleSubmit} className="join-form">
         <div className="form-group">
           <label>
-            Tangent Address
+            Create Tangent address at <a href="https://tangent.cash" target="_blank" rel="noopener noreferrer">tangent.cash</a>
             <span className="required-indicator">*</span>
           </label>
           <input
@@ -435,51 +419,36 @@ function GiveawayPage() {
             placeholder="Enter your Tangent address"
             required
           />
-          <p className="info-link">
-            You can create your address at{' '}
-            <a href="https://tangent.cash" target="_blank" rel="noopener noreferrer">
-              tangent.cash
-            </a>
-          </p>
         </div>
-        <div className="form-group">
-          <label>
-            X (Twitter) Username
-            <span className="required-indicator">*</span>
-          </label>
-          <input
-            type="text"
-            value={xUsername}
-            onChange={(e) => setXUsername(e.target.value)}
-            placeholder="@username"
-          />
-          <p className="info-link">
-            You must follow us in X at{' '}
-            <a href="https://x.com/tangentcash" target="_blank" rel="noopener noreferrer">
-              @tangentcash
-            </a>
-          </p>
-        </div>
+        {
+          isXMandatory &&
+          <div className="form-group">
+            <label>
+              Follow us in X at <a href="https://x.com/tangentcash" target="_blank" rel="noopener noreferrer">@tangentcash</a>
+              <span className="required-indicator">*</span>
+            </label>
+            <input
+              type="text"
+              value={xUsername}
+              onChange={(e) => setXUsername(e.target.value)}
+              placeholder="X (Twitter) @username"
+            />
+          </div>
+        }
         {
           (hasDiscordReward || isDiscordMandatory) &&
           <div className="form-group">
             <label>
-              Discord Username
+              Join our Discord at <a href="https://discord.gg/tangentcash" target="_blank" rel="noopener noreferrer">discord.gg/tangentcash</a>
               {isDiscordMandatory && <span className="required-indicator">*</span>}
             </label>
             <input
               type="text"
               value={discordUsername}
               onChange={(e) => setDiscordUsername(e.target.value)}
-              placeholder={isDiscordMandatory ? 'username' : 'username (optional)'}
+              placeholder={'Discord ' + (isDiscordMandatory ? 'username' : 'username (optional)')}
               required={isDiscordMandatory}
             />
-            <p className="info-link">
-              You must join our Discord server{isDiscordMandatory ? '' : ' if you enter this field'}. Join at{' '}
-              <a href="https://discord.gg/tangentcash" target="_blank" rel="noopener noreferrer">
-                discord.gg/tangentcash
-              </a>
-            </p>
           </div>
         }
         <button type="submit" className="join-btn">Join Giveaway</button>
@@ -498,6 +467,7 @@ function GiveawayPage() {
     const isFinished = !!data.finished_at;
     const hasDiscordReward = data.discord_reward_amount && data.discord_reward_amount > 0;
     const parsedDistribution = parseWinnerDistribution(data.winner_ranges);
+    const overriderAddress = localStorage.getItem('address');
 
     return (
       <div className="giveaway-container">
@@ -509,23 +479,20 @@ function GiveawayPage() {
           parsedWinningToken={data.parsed_winning_token}
           participants_count={data.participants_count}
           rules={data.rules}
-        />
-        
-        <WinnerDistributionCard
           parsedDistribution={parsedDistribution}
-          parsedWinningToken={data.parsed_winning_token}
           discordRewardAmount={hasDiscordReward ? data.discord_reward_amount?.toString() : undefined}
         />
-
         {
-          isFinished ? (
-            <WinnersCard
-              winners={data.winners}
-              parsedWinningToken={data.parsed_winning_token}
-            />
-          ) : (
-            <JoinFormCard renderForm={renderForm} />
-          )
+          isFinished &&
+          <WinnersCard
+            winners={data.winners}
+            parsedWinningToken={data.parsed_winning_token}
+            participants_count={data.participants_count}
+          />
+        }
+        {
+          !isFinished && !overriderAddress &&
+          <JoinFormCard renderForm={renderForm} />
         }
         
         <WinnerCheckCard
@@ -533,6 +500,7 @@ function GiveawayPage() {
           winners={data.winners}
           parsedWinningToken={data.parsed_winning_token}
           isFinished={isFinished}
+          overriderAddress={overriderAddress || ''}
         />
       </div>
     );
