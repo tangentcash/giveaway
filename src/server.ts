@@ -178,7 +178,7 @@ function selectWinners(giveaway: GiveawayRow, participants: ParticipantRow[], wi
       const item = shuffledParticipants[i];
       if (item != null) {
         let individualAmount = amount;
-        if (item.discord_username && giveaway.discord_reward_amount && giveaway.discord_reward_amount > 0 && (giveaway.discord_username_mandatory || item.approved == 1)) {
+        if (amount > 0 && item.discord_username && giveaway.discord_reward_amount && giveaway.discord_reward_amount > 0 && (giveaway.discord_username_mandatory || item.approved == 1)) {
           individualAmount += giveaway.discord_reward_amount;
         }
         winners.push({
@@ -406,7 +406,8 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
       const targetBlock = await getBlock(giveaway.target_block) as Block;
       if (targetBlock) {
         const winnerRanges = JSON.parse(giveaway.winner_ranges);
-        const calculatedWinners = selectWinners(giveaway, allParticipants, winnerRanges, targetBlock.pow.proof);
+        const combinedWinnerRanges = [...winnerRanges, { count: allParticipants.length - winnerRanges[winnerRanges.length - 1].count, amount: 0 }];
+        const calculatedWinners = selectWinners(giveaway, allParticipants, combinedWinnerRanges, targetBlock.pow.proof);
         winners = calculatedWinners.map((w, index: number) => ({
           rank: index + 1,
           participantId: w.participant.id,
@@ -436,7 +437,8 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
     x_username_mandatory: giveaway.x_username_mandatory,
     finished_at: giveaway.finished_at,
     participants_count: actualParticipants >= 0 ? actualParticipants : giveaway.participants,
-    winners: winners
+    winners: winners.filter((x) => x.amount > 0),
+    participants: winners.filter((x) => x.amount <= 0)
   });
 });
 

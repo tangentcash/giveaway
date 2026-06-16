@@ -63,6 +63,7 @@ interface GiveawayData {
   finished_at?: string;
   participants_count: number;
   winners: any[];
+  participants: any[];
 }
 
 interface WinnerDistribution {
@@ -176,14 +177,16 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
 interface WinnerCheckCardProps {
   giveawayId: string;
   winners: any[];
+  participants: any[];
   parsedWinningToken?: string | undefined;
   isFinished: boolean
   overriderAddress: string
 }
 
-const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, parsedWinningToken, isFinished, overriderAddress }) => {
+const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, participants, parsedWinningToken, isFinished, overriderAddress }) => {
   const [walletAddress, setWalletAddress] = useState('');
   const [walletHash, setWalletHash] = useState<string | null>(null);
+  const [rank, setRank] = useState<number | null>(null);
   const [isWinner, setIsWinner] = useState<boolean | null>(null);
   const [approval, setApproval] = useState<{ approved: number } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -223,7 +226,12 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
         const winnerHash = w.walletHash || w.wallet_hash;
         return winnerHash === hash;
       });
-
+      const nonMatch = participants.find((w: any) => {
+        const winnerHash = w.walletHash || w.wallet_hash;
+        return winnerHash === hash;
+      });
+      const rank = (match || nonMatch)?.rank;
+      setRank(typeof rank == 'number' ? rank : null);
       if (isFinished && match) {
         setIsWinner(true);
         setPrizeAmount(match.amount);
@@ -280,7 +288,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
               <span className="result-label">Wallet Hash:</span>
               <span className="wallet-hash-display">{walletHash.substring(0, 16)}<span style={{ color: 'greenyellow' }}>{walletHash.substring(16, 8)}</span></span>
               { !isFinished && <span className="wallet-hash-display" style={{ color: approvalStatus == 'approved' ? 'greenyellow' : (approvalStatus == 'partially-approved' || approvalStatus == 'pending' ? 'yellow' : 'gray'), marginLeft: '8px' }}>{ approvalStatus == 'approved' ? 'You\'re IN!' : (approvalStatus == 'partially-approved' ? 'You\'re partially IN!' : (approvalStatus == 'pending' ? 'Pending Approval' : 'Not Registered')) }</span> }
-              { isFinished && <p className="not-winner-text">Sorry, you are not a winner this time.</p> }
+              { isFinished && <p className="not-winner-text">Sorry, you are not a winner this time.{ rank != null ? ` Your place is ${rank}` : '' }</p> }
             </div>
           ) : null}
         </div>
@@ -498,6 +506,7 @@ function GiveawayPage() {
         <WinnerCheckCard
           giveawayId={data.id}
           winners={data.winners}
+          participants={data.participants}
           parsedWinningToken={data.parsed_winning_token}
           isFinished={isFinished}
           overriderAddress={overriderAddress || ''}
