@@ -29,6 +29,7 @@ interface GiveawayData {
   finished_at?: string;
   participants?: any[];
   winners: any[];
+  mirror_giveaway_id?: string | null;
 }
 
 interface RuleItem {
@@ -61,6 +62,8 @@ function ManagePage() {
   const [discordRewardAmount, setDiscordRewardAmount] = useState('');
   const [discordMandatory, setDiscordMandatory] = useState(false);
   const [xMandatory, setXMandatory] = useState(true);
+  const [mirrorGiveawayId, setMirrorGiveawayId] = useState<string>('');
+  const [isMirror, setIsMirror] = useState(false);
   const [botFilter, setBotFilter] = useState(false);
   const approvedParticipants = useMemo((): number => data && data.participants ? data.participants.reduce((c, p) => (p.approved > 0 ? 1 : 0) + c, 0) : 0, [data]);
   const analyticsData = useMemo((): { date: string, dayAll: number, totalAll: number, dayUnique: number, totalUnique: number }[] => {
@@ -178,6 +181,14 @@ function ManagePage() {
       setDiscordRewardAmount((data.discord_reward_amount?.toString()) || '');
       setDiscordMandatory(!!data.discord_username_mandatory);
       setXMandatory(!!data.x_username_mandatory);
+
+      if (data.mirror_giveaway_id) {
+        setMirrorGiveawayId(data.mirror_giveaway_id);
+        setIsMirror(true);  // Current giveaway is mirroring another
+      } else {
+        setMirrorGiveawayId('');
+        setIsMirror(false);
+      }
     }
   }, [data]);
 
@@ -274,7 +285,8 @@ function ManagePage() {
         winner_ranges: parsedWinnerRanges,
         discord_reward_amount: discordRewardAmountValue,
         discord_username_mandatory: discordMandatory,
-        x_username_mandatory: xMandatory
+        x_username_mandatory: xMandatory,
+        mirror_giveaway_id: isMirror ? mirrorGiveawayId : null,
       })
     })
     .then(() => {
@@ -376,6 +388,22 @@ function ManagePage() {
           }}>
           💬 {p.discord_username}
         </button>
+      );
+    }
+    
+    if (p.mirror_giveaway_id) {
+      links.push(
+        <a 
+          key="m"
+          href={`/${p.mirror_giveaway_id}`} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="social-badge twitter"
+          style={{ backgroundColor: '#781cce' }}
+          title={`G: ${p.mirror_giveaway_id}`}
+        >
+          🔗 {p.mirror_giveaway_id.substring(0, 3).toUpperCase()}
+        </a>
       );
     }
     
@@ -542,6 +570,47 @@ function ManagePage() {
                 style={{ width: '150px' }}
               />
             </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Giveaway Mirroring</label>
+            <p style={{ margin: '8px 0', fontSize: '14px', color: '#71767b' }}>
+              Mirror this giveaway to another ID. When mirrored, this giveaway will show all properties from the target giveaway.
+              Participants registered through the mirror link will be tracked as referrals.
+            </p>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={isMirror}
+                  onChange={(e) => {
+                    setIsMirror(e.target.checked);
+                    if (!e.target.checked) setMirrorGiveawayId('');
+                  }}
+                  style={{ width: 'auto' }}
+                />
+                Enable mirroring
+              </label>
+            </div>
+            
+            {isMirror && (
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={mirrorGiveawayId}
+                  onChange={(e) => setMirrorGiveawayId(e.target.value)}
+                  placeholder="Target giveaway ID (e.g., original-giveaway-id)"
+                  style={{ flex: 1 }}
+                />
+              </div>
+            )}
+            
+            {isMirror && mirrorGiveawayId && (
+              <small style={{ display: 'block', marginTop: '6px', color: '#71767b' }}>
+                This giveaway will mirror "{mirrorGiveawayId}" and show its properties
+              </small>
+            )}
           </div>
 
           <div className="actions-row">

@@ -23,6 +23,7 @@ type GiveawayRow = {
   x_username_mandatory: number;
   created_at: string;
   finished_at: string | null;
+  mirror_giveaway_id: string | null;
 };
 
 type ParticipantRow = {
@@ -34,6 +35,7 @@ type ParticipantRow = {
   ip: string | null,
   approved: number;
   created_at: string;
+  mirror_giveaway_id: string | null;
 };
 
 type Block = {
@@ -206,7 +208,7 @@ async function autoFinishGiveaways() {
     const activeGiveaways = db.prepare(`
       SELECT id, target_block, winner_ranges, winning_token 
       FROM giveaways 
-      WHERE finished_at IS NULL AND target_block IS NOT NULL 
+      WHERE finished_at IS NULL AND target_block IS NOT NULL AND mirror_giveaway_id IS NULL
       ORDER BY target_block ASC
     `).all() as (GiveawayRow & { target_block: number; winner_ranges: string; winning_token: string })[];
 
@@ -339,6 +341,7 @@ RPC.applyImplementation({
 });
 
 // Initialize database tables
+const toGiveawayId = (id?: string): string => (db.prepare('SELECT mirror_giveaway_id FROM giveaways WHERE id = ? AND mirror_giveaway_id IS NOT NULL').get(id || '') as { mirror_giveaway_id?: string } | undefined)?.mirror_giveaway_id || id || '';
 db.exec(`
   CREATE TABLE IF NOT EXISTS giveaways (
     id TEXT PRIMARY KEY,
@@ -351,7 +354,8 @@ db.exec(`
     discord_username_mandatory INTEGER DEFAULT 0,
     x_username_mandatory INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    finished_at DATETIME
+    finished_at DATETIME,
+    mirror_giveaway_id TEXT REFERENCES giveaways(id)
   );
 
   CREATE TABLE IF NOT EXISTS participants (
@@ -363,6 +367,7 @@ db.exec(`
     ip TEXT DEFAULT NULL,
     approved INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    mirror_giveaway_id TEXT REFERENCES giveaways(id),
     FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
   );
   CREATE INDEX IF NOT EXISTS participants_ip ON participants (ip);				
@@ -375,9 +380,11 @@ db.exec(`
 
 `);
 
+
 // Get or create giveaway (public endpoint - no sensitive data)
 app.get('/giveaway/:id', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const sourceId = req.params['id'] || '';
+  const id = toGiveawayId(sourceId);
   const giveaway = db.prepare('SELECT *, (SELECT COUNT(1) FROM participants WHERE giveaway_id = giveaways.id) AS participants FROM giveaways WHERE id = ?').get(id) as (GiveawayRow & { participants: number }) | undefined;
   
   if (!giveaway) {
@@ -394,6 +401,13 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
       winners: []
     });
     return;
+  }
+
+  let mirrorParticipants = 0;
+  if (sourceId != id) {
+    giveaway.id = sourceId;
+    giveaway.mirror_giveaway_id = id;
+    mirrorParticipants = (db.prepare('SELECT COUNT(1) AS participants FROM participants WHERE giveaway_id = ? AND mirror_giveaway_id = ?').get(id, sourceId) as { participants?: number })?.participants || 0;
   }
 
   // Calculate winners on-the-fly if giveaway is finished
@@ -438,18 +452,20 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
     finished_at: giveaway.finished_at,
     participants_count: actualParticipants >= 0 ? actualParticipants : giveaway.participants,
     winners: winners.filter((x) => x.amount > 0),
-    participants: winners.filter((x) => x.amount <= 0)
+    participants: winners.filter((x) => x.amount <= 0),
+    mirror_participants: mirrorParticipants
   });
 });
 
 // Check participant approval
 app.get('/giveaway/:id/status/:address', (req: Request, res: Response) => {
-  const { id, address } = req.params;
+  const { address } = req.params;
   if (!address || !checkAddress(address)) {
     res.status(400).json({ error: 'Invalid TAN address' });
     return;
   }
 
+  const id = toGiveawayId(req.params['id']);
   const participant = db.prepare('SELECT approved, created_at FROM participants WHERE giveaway_id = ? AND tan_address = ? LIMIT 1').get(id, address) as ParticipantRow | undefined;
   const silentlyRejected = participant ? participant.approved == 0 && new Date().getTime() - new Date(participant.created_at).getTime() > 8 * 3600 * 1000 : false;
   res.json({ approved: participant ? (silentlyRejected ? 1 : participant.approved) : null });
@@ -457,7 +473,6 @@ app.get('/giveaway/:id/status/:address', (req: Request, res: Response) => {
 
 // Submit participant info
 app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
-  const { id } = req.params;
   const { tan_address, x_username, discord_username } = req.body;
 
   const ip = req.get('X-Real-IP') || req.get('X-Forwarded-For') || req.ip;
@@ -467,6 +482,7 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
   }
 
   // Get or create giveaway
+  const id = toGiveawayId(req.params['id']);
   let giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
   if (!giveaway) {
     db.prepare('INSERT INTO giveaways (id) VALUES (?)').run(id);
@@ -481,7 +497,8 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
       discord_username_mandatory: 0,
       x_username_mandatory: 1,
       created_at: new Date().toISOString(),
-      finished_at: null
+      finished_at: null,
+      mirror_giveaway_id: null
     };
   }
 
@@ -517,12 +534,13 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
     return;
   }
 
-  const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username, ip) VALUES (?, ?, ?, ?, ?)').run(
+  const result = db.prepare('INSERT INTO participants (giveaway_id, tan_address, x_username, discord_username, ip, mirror_giveaway_id) VALUES (?, ?, ?, ?, ?, ?)').run(
     id,
     tan_address,
     final_x_username || null,
     final_discord_username || null,
-    ip || null
+    ip || null,
+    req.params['id'] || null
   );
 
   const participant = db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid) as ParticipantRow;
@@ -531,8 +549,9 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
 
 // Admin endpoints
 app.get('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
+  const sourceId = req.params['id'] || '';
+  const id = toGiveawayId(sourceId);
+  let giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
 
   if (!giveaway) {
     res.json({
@@ -542,10 +561,13 @@ app.get('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
       winners: []
     });
     return;
+  } else if (sourceId != id) {
+    giveaway.id = sourceId;
+    giveaway.mirror_giveaway_id = id;
   }
 
   const participants = db.prepare('SELECT *, (SELECT COUNT(1) FROM participants p WHERE p.ip = participants.ip AND p.giveaway_id = participants.giveaway_id) AS ips FROM participants WHERE giveaway_id = ? ORDER BY created_at ASC').all(id) as ParticipantRow[];
-  
+
   // Calculate winners on-the-fly if giveaway is finished
   let winners: any[] = [];
   if (giveaway.finished_at && giveaway.target_block && giveaway.winner_ranges) {
@@ -580,8 +602,8 @@ app.get('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
 
 // Giveaway endpoint with sensitive participant data - requires admin auth
 app.get('/giveaway/:id/with-participants', async (req: Request, res: Response) => {
-  const { id } = req.params;
-  
+  const sourceId = req.params['id'] || '';
+  const id = toGiveawayId(sourceId);
   if (!hasAdminAuth(req)) {
     res.status(401).json({ error: 'Unauthorized - Admin access required' });
     return;
@@ -603,10 +625,13 @@ app.get('/giveaway/:id/with-participants', async (req: Request, res: Response) =
       winners: []
     });
     return;
+  } else if (sourceId != id) {
+    giveaway.id = sourceId;
+    giveaway.mirror_giveaway_id = id;
   }
 
   const participants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? ORDER BY created_at DESC').all(id) as ParticipantRow[];
-  
+
   let winners: any[] = [];
   if (giveaway.finished_at && giveaway.target_block && giveaway.winner_ranges) {
     try {
@@ -641,8 +666,9 @@ app.get('/giveaway/:id/with-participants', async (req: Request, res: Response) =
 });
 
 app.put('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { description, rules, target_block, winning_token, winner_ranges } = req.body;
+  const sourceId = req.params['id'] || '';
+  const id = toGiveawayId(sourceId);
+  const { description, rules, target_block, winning_token, winner_ranges, mirror_giveaway_id } = req.body;
 
   const existing = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
   if (!existing) {
@@ -691,27 +717,49 @@ app.put('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
     ? req.body.x_username_mandatory ? 1 : 0
     : null;
 
-  db.prepare(`
-    UPDATE giveaways
-    SET description = ?, rules = ?, target_block = ?, winning_token = ?, winner_ranges = ?, discord_reward_amount = ?, discord_username_mandatory = ?, x_username_mandatory = ?, finished_at = ${finishedAtValue}
-    WHERE id = ?
-  `).run(
-    description || null,
-    rules !== undefined && rules !== null ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null,
-    targetBlockValue,
-    winning_token || null,
-    winner_ranges !== undefined && winner_ranges !== null ? (typeof winner_ranges === 'string' ? winner_ranges : JSON.stringify(winner_ranges)) : null,
-    discordRewardAmount !== null ? discordRewardAmount : null,
-    discordUsernameMandatory !== null ? discordUsernameMandatory : null,
-    xUsernameMandatory !== null ? xUsernameMandatory : null,
-    id
-  );
+  if (sourceId != id) {
+    const verifiedMirrorGiveawayId = mirror_giveaway_id ? (db.prepare(`SELECT id FROM giveaways WHERE id = ?`).get(mirror_giveaway_id) ? mirror_giveaway_id : null) : null;
+    db.prepare(`
+      UPDATE giveaways
+      SET description = ?, rules = ?, target_block = ?, winning_token = ?, winner_ranges = ?, discord_reward_amount = ?, discord_username_mandatory = ?, x_username_mandatory = ?, finished_at = ${finishedAtValue}
+      WHERE id = ?
+    `).run(
+      description || null,
+      rules !== undefined && rules !== null ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null,
+      targetBlockValue,
+      winning_token || null,
+      winner_ranges !== undefined && winner_ranges !== null ? (typeof winner_ranges === 'string' ? winner_ranges : JSON.stringify(winner_ranges)) : null,
+      discordRewardAmount !== null ? discordRewardAmount : null,
+      discordUsernameMandatory !== null ? discordUsernameMandatory : null,
+      xUsernameMandatory !== null ? xUsernameMandatory : null,
+      id
+    );
+    db.prepare(`UPDATE giveaways SET mirror_giveaway_id = ? WHERE id = ?`).run(verifiedMirrorGiveawayId, sourceId);
+  } else {
+    db.prepare(`
+      UPDATE giveaways
+      SET description = ?, rules = ?, target_block = ?, winning_token = ?, winner_ranges = ?, discord_reward_amount = ?, discord_username_mandatory = ?, x_username_mandatory = ?, finished_at = ${finishedAtValue}, mirror_giveaway_id = ?
+      WHERE id = ?
+    `).run(
+      description || null,
+      rules !== undefined && rules !== null ? (typeof rules === 'string' ? rules : JSON.stringify(rules)) : null,
+      targetBlockValue,
+      winning_token || null,
+      winner_ranges !== undefined && winner_ranges !== null ? (typeof winner_ranges === 'string' ? winner_ranges : JSON.stringify(winner_ranges)) : null,
+      discordRewardAmount !== null ? discordRewardAmount : null,
+      discordUsernameMandatory !== null ? discordUsernameMandatory : null,
+      xUsernameMandatory !== null ? xUsernameMandatory : null,
+      mirror_giveaway_id || null,
+      id
+    );
+  }
 
   res.json({ message: 'Updated' });
 });
 
 app.patch('/giveaway/:id/participant/:pid', requireAdmin, (req: Request, res: Response) => {
-  const { id, pid } = req.params;
+  const id = toGiveawayId(req.params['id']);
+  const { pid } = req.params;
   const { action } = req.body;
 
   if (!['approve', 'partial-approve', 'reject'].includes(action)) {
@@ -732,7 +780,7 @@ app.patch('/giveaway/:id/participant/:pid', requireAdmin, (req: Request, res: Re
 });
 
 app.post('/giveaway/:id/build-payout', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = toGiveawayId(req.params['id']);
   const giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
 
   if (!giveaway) {

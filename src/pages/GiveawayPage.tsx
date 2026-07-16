@@ -64,6 +64,7 @@ interface GiveawayData {
   participants_count: number;
   winners: any[];
   participants: any[];
+  mirror_participants: number;
 }
 
 interface WinnerDistribution {
@@ -105,12 +106,13 @@ interface GiveawayDescriptionCardProps {
   winningToken?: string | undefined;
   parsedWinningToken?: string | undefined;
   participants_count?: number,
+  mirror_participants?: number,
   rules?: any;
   parsedDistribution: WinnerDistribution[];
   discordRewardAmount?: string | undefined
 }
 
-const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ description, targetBlock, isFinished, winningToken, parsedWinningToken, rules, participants_count, parsedDistribution, discordRewardAmount }) => {
+const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ description, targetBlock, isFinished, winningToken, parsedWinningToken, rules, participants_count, mirror_participants, parsedDistribution, discordRewardAmount }) => {
   if (!description && !targetBlock && !winningToken) return null;
   
   const rulesArray = Array.isArray(rules) ? rules : typeof rules === 'string' ? JSON.parse(rules) : [];
@@ -168,6 +170,9 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
       }
       {!isFinished && participants_count ?
         <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.9rem', borderTop: '1px solid #2f3336' }}>{participants_count} { participants_count > 1 ? 'requests' : 'request'} to participate</p> : undefined
+      }
+      {!isFinished && mirror_participants ?
+        <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.8rem' }}>{mirror_participants} mirror { mirror_participants > 1 ? 'requests' : 'request'}</p> : undefined
       }
     </Card>
   );
@@ -387,7 +392,7 @@ function GiveawayPage() {
       return res.json();
     })
     .then(() => {
-      localStorage.setItem('address', tanAddress);
+      localStorage.setItem('address:' + id, tanAddress);
       alert('Successfully joined giveaway!');
       setTanAddress('');
       setXUsername('');
@@ -475,7 +480,7 @@ function GiveawayPage() {
     const isFinished = !!data.finished_at;
     const hasDiscordReward = data.discord_reward_amount && data.discord_reward_amount > 0;
     const parsedDistribution = parseWinnerDistribution(data.winner_ranges);
-    const overriderAddress = localStorage.getItem('address');
+    const overriderAddress = localStorage.getItem('address:' + id);
 
     return (
       <div className="giveaway-container">
@@ -486,6 +491,7 @@ function GiveawayPage() {
           winningToken={data.winning_token}
           parsedWinningToken={data.parsed_winning_token}
           participants_count={data.participants_count}
+          mirror_participants={data.mirror_participants}
           rules={data.rules}
           parsedDistribution={parsedDistribution}
           discordRewardAmount={hasDiscordReward ? data.discord_reward_amount?.toString() : undefined}
