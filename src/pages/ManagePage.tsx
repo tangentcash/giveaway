@@ -399,8 +399,8 @@ function ManagePage() {
           target="_blank" 
           rel="noopener noreferrer"
           className="social-badge twitter"
-          style={{ backgroundColor: '#781cce' }}
-          title={`G: ${p.mirror_giveaway_id}`}
+          style={p.duplicates ? { backgroundColor: p.approved > 0 ? 'red' : '#101010' } : { backgroundColor: '#781cce' }}
+          title={`From: ${p.mirror_giveaway_id}`}
         >
           🔗 {p.mirror_giveaway_id.substring(0, 3).toUpperCase()}
         </a>
