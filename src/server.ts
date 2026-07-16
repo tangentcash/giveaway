@@ -482,7 +482,8 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
   }
 
   // Get or create giveaway
-  const id = toGiveawayId(req.params['id']);
+  const sourceId = req.params['id'] || '';
+  const id = toGiveawayId(sourceId);
   let giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
   if (!giveaway) {
     db.prepare('INSERT INTO giveaways (id) VALUES (?)').run(id);
@@ -540,7 +541,7 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
     final_x_username || null,
     final_discord_username || null,
     ip || null,
-    req.params['id'] || null
+    id != sourceId ? req.params['id'] || null : null
   );
 
   const participant = db.prepare('SELECT * FROM participants WHERE id = ?').get(result.lastInsertRowid) as ParticipantRow;
