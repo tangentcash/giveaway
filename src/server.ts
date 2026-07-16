@@ -381,6 +381,11 @@ db.exec(`
 `);
 
 
+app.get('/giveaways', async (_: Request, res: Response) => {
+  const giveaways = db.prepare('SELECT id, created_at, finished_at IS NULL AS active, (SELECT COUNT(1) FROM participants WHERE giveaway_id = giveaways.id) AS participants FROM giveaways WHERE mirror_giveaway_id IS NULL ORDER BY created_at DESC').all() as ({ id: string, active: boolean, participants: number })[];
+  res.json(giveaways.filter((x) => x.participants > 0));
+});
+
 // Get or create giveaway (public endpoint - no sensitive data)
 app.get('/giveaway/:id', async (req: Request, res: Response) => {
   const sourceId = req.params['id'] || '';

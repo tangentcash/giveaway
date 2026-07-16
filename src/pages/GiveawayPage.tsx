@@ -67,6 +67,13 @@ interface GiveawayData {
   mirror_participants: number;
 }
 
+interface GiveawayRef {
+  id: string;
+  active: boolean;
+  created_at: string;
+  participants: number;
+}
+
 interface WinnerDistribution {
   count: number;
   amount: number;
@@ -172,7 +179,7 @@ const GiveawayDescriptionCard: React.FC<GiveawayDescriptionCardProps> = ({ descr
         <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.9rem', borderTop: '1px solid #2f3336' }}>{participants_count} { participants_count > 1 ? 'requests' : 'request'} to participate</p> : undefined
       }
       {!isFinished && mirror_participants ?
-        <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.8rem' }}>{mirror_participants} mirror { mirror_participants > 1 ? 'requests' : 'request'}</p> : undefined
+        <p className="join-warning" style={{ color: 'lightgray', paddingBottom: '4px', fontSize: '0.8rem' }}>{mirror_participants} referral { mirror_participants > 1 ? 'requests' : 'request'}</p> : undefined
       }
     </Card>
   );
@@ -355,6 +362,7 @@ const JoinFormCard: React.FC<JoinFormCardProps> = ({ renderForm }) => {
 function GiveawayPage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<GiveawayData | null>(null);
+  const [list, setList] = useState<GiveawayRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -363,17 +371,19 @@ function GiveawayPage() {
   const [discordUsername, setDiscordUsername] = useState('');
 
   useEffect(() => {
-    if (!id) {
-      setError('Giveaway ID is required');
-      setLoading(false);
-      return;
+    if (id) {    
+      fetch(`/giveaway/${id}`)
+        .then(res => res.json())
+        .then(setData)
+        .catch(() => setError('Failed to fetch giveaway'))
+        .finally(() => setLoading(false));
+    } else {
+      fetch(`/giveaways`)
+        .then(res => res.json())
+        .then(setList)
+        .catch(() => setError('Failed to fetch giveaways'))
+        .finally(() => setLoading(false));
     }
-    
-    fetch(`/giveaway/${id}`)
-      .then(res => res.json())
-      .then(setData)
-      .catch(() => setError('Failed to fetch giveaway'))
-      .finally(() => setLoading(false));
   }, [id]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -475,6 +485,34 @@ function GiveawayPage() {
   const renderContent = () => {
     if (loading) return <div className="loading">Loading...</div>;
     if (error) return <div className="error">{error}</div>;
+
+    if (!id) {
+      return (    
+        <Card title="🔥 Giveaways">
+          <table className="winners-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Entries</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((w) => (
+                <tr key={w.id}>
+                  <td><a href={`/${w.id}`}>{ w.id }</a></td>
+                  <td><p className="rule-badge" style={{ color: w.active ? '#00ba7c' : '#f4212e', padding: '4px 8px' }}>{ w.active ? 'ACTIVE' : 'FINISHED' }</p></td>
+                  <td>{ w.participants } { w.participants != 1 ? 'entries' : 'entry' }</td>
+                  <td>{ new Date(w.created_at).toLocaleDateString() }</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )
+    }
+
     if (!data || !data.exists) return <div className="no-giveaway">Giveaway not found.</div>;
 
     const isFinished = !!data.finished_at;
@@ -523,9 +561,12 @@ function GiveawayPage() {
 
   return (
     <div className="container">
-      <header className="header">
-        <h1>🎁 {id}</h1>
-      </header>
+      {
+        id &&
+        <header className="header">
+          <h1>🎁 {id}</h1>
+        </header>
+      }
       <main>
         {renderContent()}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '8px', marginTop: '24px', fontSize: '0.9rem' }}>
