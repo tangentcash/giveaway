@@ -273,7 +273,7 @@ const WinnerCheckCard: React.FC<WinnerCheckCardProps> = ({ giveawayId, winners, 
             type="text"
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
-            placeholder={ overriderAddress || 'Enter your Tangent address' }
+            placeholder={ overriderAddress || 'Tangent address (tc1...)' }
             disabled={loading}
           />
         </div>
@@ -439,7 +439,7 @@ function GiveawayPage() {
             type="text"
             value={tanAddress}
             onChange={(e) => setTanAddress(e.target.value)}
-            placeholder="Enter your Tangent address"
+            placeholder="Tangent address (tc1...)"
             required
           />
         </div>
