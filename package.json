@@ -6,8 +6,8 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "node --loader ts-node/esm src/server.ts",
-    "build:client": "tsc -p tsconfig.server.json && tsc -p tsconfig.json && vite build",
-    "build:server": "tsc -p tsconfig.server.json"
+    "make:client": "tsc -p tsconfig.server.json && tsc -p tsconfig.json && vite build",
+    "make:server": "tsc -p tsconfig.server.json"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
