@@ -720,6 +720,20 @@ app.patch('/giveaway/:id/participant/:pid', requireAdmin, (req: Request, res: Re
   res.json({ message: `Participant ${action}` });
 });
 
+app.delete('/giveaway/:id/participant/:pid', requireAdmin, (req: Request, res: Response) => {
+  const id = toGiveawayId(req.params['id']);
+  const { pid } = req.params;
+
+  const participant = db.prepare('SELECT * FROM participants WHERE id = ? AND giveaway_id = ?').get(pid, id) as ParticipantRow | undefined;
+  if (!participant) {
+    res.status(404).json({ error: 'Participant not found' });
+    return;
+  }
+
+  db.prepare('DELETE FROM participants WHERE id = ? AND giveaway_id = ?').run(pid, id);
+  res.json({ message: 'Participant deleted' });
+});
+
 app.post('/giveaway/:id/build-payout', requireAdmin, async (req: Request, res: Response) => {
   const id = toGiveawayId(req.params['id']);
   const giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;

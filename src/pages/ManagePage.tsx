@@ -311,6 +311,26 @@ function ManagePage() {
     }
   };
 
+  const handleDeleteParticipant = async (pid: number) => {
+    if (!confirm('Delete this participant from the giveaway? This cannot be undone.'))
+      return;
+    try {
+      const res = await fetch(`/giveaway/${id}/participant/${pid}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Failed to delete participant');
+        return;
+      }
+      fetchGiveaway();
+    } catch (err) {
+      console.error('Failed to delete participant:', err);
+      alert('Failed to delete participant');
+    }
+  };
+
   const handleBuildPayout = async () => {
     try {
       if (!data)
@@ -645,27 +665,36 @@ function ManagePage() {
                       </a>
                     </td>
                     <td>{renderSocialLinks(p)}</td>
-                    <td>
-                      {
-                        !data.discord_username_mandatory && data.discord_reward_amount && data.discord_reward_amount > 0 && p.discord_username &&
-                        <label className="approval-checkbox" style={{ marginRight: '4px' }}>
+                    <td className="approved-cell">
+                      <div className="approved-controls">
+                        {
+                          !data.discord_username_mandatory && data.discord_reward_amount && data.discord_reward_amount > 0 && p.discord_username &&
+                          <label className="approval-checkbox" style={{ marginRight: '4px' }}>
+                            <input
+                              style={{ accentColor: 'yellow' }}
+                              type="checkbox"
+                              checked={p.approved == 2}
+                              onChange={() => handleToggleApproval(p.id, p.approved == 2 ? 'reject' : 'partial-approve')}
+                            />
+                            {p.approved == 2 ? '✗' : ''}
+                          </label>
+                        }
+                        <label className="approval-checkbox">
                           <input
-                            style={{ accentColor: 'yellow' }}
                             type="checkbox"
-                            checked={p.approved == 2}
-                            onChange={() => handleToggleApproval(p.id, p.approved == 2 ? 'reject' : 'partial-approve')}
+                            checked={p.approved == 1}
+                            onChange={() => handleToggleApproval(p.id, p.approved == 1 ? 'reject' : 'approve')}
                           />
-                          {p.approved == 2 ? '✗' : ''}
+                          {p.approved == 1 ? '✓' : ''}
                         </label>
-                      }
-                      <label className="approval-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={p.approved == 1}
-                          onChange={() => handleToggleApproval(p.id, p.approved == 1 ? 'reject' : 'approve')}
-                        />
-                        {p.approved == 1 ? '✓' : ''}
-                      </label>
+                        <button
+                          className="delete-btn participant-delete-btn"
+                          title="Delete participant"
+                          onClick={() => handleDeleteParticipant(p.id)}
+                        >
+                          🗑︎
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

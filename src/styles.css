@@ -378,6 +378,35 @@ button:active {
   background-color: #d91a27;
 }
 
+.participants-table .participant-delete-btn {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  margin-left: 8px;
+  vertical-align: middle;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  color: #8b1a1a;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.participants-table .participant-delete-btn:hover {
+  background-color: #16181c;
+  border-color: #f4212e;
+  color: #f4212e;
+}
+
+.participants-table td.approved-cell {
+  white-space: nowrap;
+}
+
+.approved-controls {
+  display: flex;
+  align-items: center;
+}
+
 /* Action Buttons (Approve, Build Payout, Finish) */
 .approve-btn,
 .build-payout-btn,
@@ -1124,7 +1153,8 @@ button:active {
     padding: 3px 8px;
   }
 
-  .approval-checkbox {
+  .approval-checkbox,
+  .participants-table .participant-delete-btn {
     font-size: 0.8rem;
     padding: 4px 10px;
   }
