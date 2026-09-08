@@ -1604,3 +1604,125 @@ button:active {
   cursor: pointer;
   accent-color: #f4212e;
 }
+/* Verify Results Card Styles */
+.verify-note {
+  color: #71767b;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.verify-form {
+  display: flex;
+  gap: 8px;
+}
+
+.verify-form input {
+  flex: 1;
+  padding: 12px 14px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #e7e9ea;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.verify-form input::placeholder {
+  color: #71767b;
+}
+
+.verify-form input:focus {
+  outline: none;
+  border-color: #1d9bf0;
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.2);
+}
+
+.verify-form .check-btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+.verify-steps {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verify-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.verify-step-status {
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.verify-step-pending .verify-step-status { color: #71767b; }
+.verify-step-running .verify-step-status { color: #1d9bf0; }
+.verify-step-pass .verify-step-status { color: #00ba7c; }
+.verify-step-fail { border-color: #f4212e; }
+.verify-step-fail .verify-step-status { color: #f4212e; }
+.verify-step-info .verify-step-status { color: #ffad1f; }
+
+.verify-step-detail {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #71767b;
+  word-break: break-all;
+}
+
+.verify-manual {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #2f3336;
+  font-size: 0.85rem;
+  color: #71767b;
+}
+
+.verify-manual textarea {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px 12px;
+  background-color: #000000;
+  border: 1px solid #2f3336;
+  border-radius: 12px;
+  color: #e7e9ea;
+  font-family: monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
+.verify-manual textarea:focus {
+  outline: none;
+  border-color: #1d9bf0;
+}
+
+.verify-json-btn {
+  width: auto;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid #2f3336;
+  border-radius: 9999px;
+  color: #71767b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.verify-json-btn:hover:not(:disabled) {
+  color: #e7e9ea;
+  border-color: #1d9bf0;
+}
+
+.verify-json-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

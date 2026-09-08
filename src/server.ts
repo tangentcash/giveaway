@@ -24,6 +24,8 @@ type GiveawayRow = {
   created_at: string;
   finished_at: string | null;
   mirror_giveaway_id: string | null;
+  manifest: string | null;
+  manifest_hash: string | null;
 };
 
 type ParticipantRow = {
@@ -94,6 +96,132 @@ function sha256StringToBigInt(str: string): bigint {
   const hash = createHash('sha256').update(str).digest('hex');
   // Convert the hex string to a BigInt (base 16)
   return BigInt(`0x${hash}`);
+}
+
+type VerifyLeaf = {
+  h: string;   // walletHash = sha256(giveaway_id + tan_address)
+  ah: string;  // sha256(tan_address) - mixed into the seed, like the original algorithm
+  ap: number;  // approval level (1 approved, 2 partially approved)
+  dx: number;  // has discord username
+  xs: number;  // has x username
+};
+
+type VerifyResultRow = {
+  rank: number;
+  h: string;
+  amount: number;
+};
+
+type VerifyBundle = {
+  version: number;
+  hash_id: string;
+  target_block: number;
+  proof_hash: string;
+  winner_ranges: { count: number; amount: number }[];
+  discord_reward_amount: number;
+  discord_username_mandatory: number;
+  total_participants: number;
+  participants: VerifyLeaf[];
+  results: VerifyResultRow[];
+};
+
+function sha256Hex(input: string): string {
+  return createHash('sha256').update(input).digest('hex');
+}
+
+/**
+ * Port of shuffleParticipants() operating only on published leaves.
+ * Deterministic and exactly equivalent given the same proof + leaf order.
+ */
+function shuffleVerifyLeaves(leaves: VerifyLeaf[], proofHex: string): VerifyLeaf[] {
+  if (leaves.length <= 1)
+    return [...leaves];
+
+  const seed = BigInt(proofHex);
+  let compositeSeed: bigint = seed;
+  leaves.forEach((leaf) => {
+    compositeSeed = compositeSeed ^ BigInt(`0x${leaf.ah}`);
+  });
+
+  const bitDepth = BigInt(Math.max(seed.toString(2).length + 1, 128));
+  const mod = 1n << bitDepth;
+  const increment = (1n << (bitDepth - 1n)) + 1n;
+  const multiplier = (3n * (1n << (bitDepth - 2n))) + 1n;
+
+  let state = compositeSeed % mod;
+  if (state === 0n) state = 1n;
+
+  const result = [...leaves];
+  for (let i = result.length - 1; i > 0; i--) {
+    state = (multiplier * state + increment) % mod;
+    const randomIndex = Number(state % (BigInt(i) + 1n));
+    const temp = result[i];
+    result[i] = result[randomIndex] as VerifyLeaf;
+    result[randomIndex] = temp as VerifyLeaf;
+  }
+
+  return result;
+}
+
+function buildVerifyBundle(giveaway: GiveawayRow, participants: ParticipantRow[], proofHex: string): VerifyBundle {
+  const leaves: VerifyLeaf[] = participants
+    .filter((p) => p.approved > 0)
+    .map((p) => ({
+      h: hashAddress(giveaway.id, p.tan_address),
+      ah: sha256Hex(p.tan_address),
+      ap: p.approved,
+      dx: p.discord_username ? 1 : 0,
+      xs: p.x_username ? 1 : 0
+    }));
+
+  const winnerRanges: { count: number; amount: number }[] = [...(JSON.parse(giveaway.winner_ranges || '[]') as { count: number; amount: number }[])].sort((a, b) => a.count - b.count);
+  const combinedRanges = winnerRanges.length > 0
+    ? [...winnerRanges, { count: participants.length - (winnerRanges[winnerRanges.length - 1] as { count: number }).count, amount: 0 }]
+    : [];
+
+  const shuffled = shuffleVerifyLeaves(leaves, proofHex);
+  const results: VerifyResultRow[] = [];
+  for (const range of combinedRanges) {
+    const length = Math.min(range.count, shuffled.length);
+    for (let i = results.length; i < length; i++) {
+      const item = shuffled[i];
+      if (item != null) {
+        let individualAmount = range.amount;
+        if (range.amount > 0 && item.dx === 1 && giveaway.discord_reward_amount && giveaway.discord_reward_amount > 0 && (giveaway.discord_username_mandatory || item.ap === 1)) {
+          individualAmount += giveaway.discord_reward_amount;
+        }
+        results.push({ rank: results.length + 1, h: item.h, amount: individualAmount });
+      }
+    }
+  }
+
+  return {
+    version: 1,
+    hash_id: giveaway.id,
+    target_block: giveaway.target_block as number,
+    proof_hash: sha256Hex(proofHex),
+    winner_ranges: winnerRanges,
+    discord_reward_amount: giveaway.discord_reward_amount,
+    discord_username_mandatory: giveaway.discord_username_mandatory,
+    total_participants: participants.length,
+    participants: leaves,
+    results
+  };
+}
+
+function verifyBundleDigest(bundle: VerifyBundle): string {
+  return sha256Hex([
+    'gv1',
+    bundle.hash_id,
+    String(bundle.target_block),
+    bundle.proof_hash,
+    bundle.winner_ranges.map((r) => `${r.count}:${r.amount}`).join(','),
+    String(bundle.discord_reward_amount),
+    String(bundle.discord_username_mandatory),
+    String(bundle.total_participants),
+    bundle.participants.map((p) => `${p.h}:${p.ap}:${p.dx}:${p.xs}`).join(','),
+    bundle.results.map((r) => `${r.rank}:${r.h}:${r.amount}`).join(',')
+  ].join('\n'));
 }
 
 /**
@@ -240,25 +368,11 @@ async function autoFinishGiveaways() {
         try {
           // Check if this giveaway's target block has been reached
           if (giveaway.target_block !== null && giveaway.target_block <= blockNumber) {
-            // Get participants for this giveaway
-            const participants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ?').all(giveaway.id) as ParticipantRow[];
-
-            // Calculate winners
-            const winnerRanges = JSON.parse(giveaway.winner_ranges);
-            const winners = selectWinners(giveaway, participants, winnerRanges, checkBlock.pow.proof);
-
-            // Calculate winner records on-the-fly
-            const winnerRecords = winners.map((w, index: number) => {
-              const walletHash = hashAddress(giveaway.id, w.participant.tan_address);
-              return {
-                rank: index + 1,
-                walletHash,
-                amount: w.amount
-              };
-            });
-
-            // Mark giveaway as finished
+            // Mark giveaway as finished, then freeze the public verification manifest against its own target block
             db.prepare('UPDATE giveaways SET finished_at = CURRENT_TIMESTAMP WHERE id = ?').run(giveaway.id);
+
+            const manifest = await ensureManifest(giveaway.id);
+            const winnerRecords = manifest ? manifest.bundle.results.filter((r) => r.amount > 0) : [];
 
             console.log(`Giveaway ${giveaway.id} auto-finished with ${winnerRecords.length} winners`);
             console.log('Winners:', winnerRecords);
@@ -282,6 +396,56 @@ async function getBlock(blockNumber: number): Promise<any> {
     return result || null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Frozen public verification manifest:
+ * hash list of eligible participants + metadata flags + ranked results + digest,
+ * built once when the giveaway finishes and never recomputed afterwards.
+ */
+async function ensureManifest(id: string): Promise<{ bundle: VerifyBundle; hash: string } | null> {
+  const giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(id) as GiveawayRow | undefined;
+  if (!giveaway || !giveaway.finished_at || giveaway.target_block === null || !giveaway.winner_ranges)
+    return null;
+
+  if (giveaway.manifest && giveaway.manifest_hash) {
+    try {
+      return { bundle: JSON.parse(giveaway.manifest) as VerifyBundle, hash: giveaway.manifest_hash };
+    } catch {
+      console.error(`Stored manifest on giveaway ${id} is corrupt, rebuilding`);
+    }
+  }
+
+  const targetBlock = await getBlock(giveaway.target_block) as Block | null;
+  if (!targetBlock || !targetBlock.pow || !targetBlock.pow.proof)
+    return null;
+
+  const participants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ? ORDER BY id ASC').all(id) as ParticipantRow[];
+  const bundle = buildVerifyBundle(giveaway, participants, targetBlock.pow.proof);
+  const hash = verifyBundleDigest(bundle);
+  db.prepare('UPDATE giveaways SET manifest = ?, manifest_hash = ? WHERE id = ?').run(JSON.stringify(bundle), hash, id);
+  console.log(`Manifest frozen for giveaway ${id} (${bundle.participants.length} eligible, ${bundle.results.filter((r) => r.amount > 0).length} winners)`);
+  return { bundle, hash };
+}
+
+async function backfillManifests() {
+  try {
+    const rows = db.prepare(`
+      SELECT id FROM giveaways
+      WHERE finished_at IS NOT NULL AND target_block IS NOT NULL AND winner_ranges IS NOT NULL
+        AND manifest IS NULL AND mirror_giveaway_id IS NULL
+      ORDER BY target_block ASC
+    `).all() as { id: string }[];
+    for (const row of rows) {
+      try {
+        await ensureManifest(row.id);
+      } catch (error) {
+        console.error(`Error freezing manifest for giveaway ${row.id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error in manifest backfill:', error);
   }
 }
 
@@ -316,9 +480,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
 
+// Chain node used to fetch blocks (SDK validator host:port)
+const RPC_VALIDATOR = 'p2p.tangent.cash:18419';
+
 // Configure RPC
 Chain.props = Chain.mainnet;
-RPC.applyValidator('p2p.tangent.cash:18419');
+RPC.applyValidator(RPC_VALIDATOR);
 RPC.applyImplementation({
     onCacheStore: (path: string, value: any): boolean => {
         try {
@@ -380,6 +547,13 @@ db.exec(`
 
 `);
 
+// Migration: frozen verification manifest columns
+const giveawayColumns = db.prepare('PRAGMA table_info(giveaways)').all() as { name: string }[];
+if (!giveawayColumns.some((c) => c.name === 'manifest'))
+  db.exec('ALTER TABLE giveaways ADD COLUMN manifest TEXT');
+if (!giveawayColumns.some((c) => c.name === 'manifest_hash'))
+  db.exec('ALTER TABLE giveaways ADD COLUMN manifest_hash TEXT');
+
 
 app.get('/giveaways', async (_: Request, res: Response) => {
   const giveaways = db.prepare('SELECT id, created_at, finished_at IS NULL AS active, (SELECT COUNT(1) FROM participants WHERE giveaway_id = giveaways.id) AS participants FROM giveaways WHERE mirror_giveaway_id IS NULL ORDER BY created_at DESC').all() as ({ id: string, active: boolean, participants: number })[];
@@ -415,28 +589,49 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
     mirrorParticipants = (db.prepare('SELECT COUNT(1) AS participants FROM participants WHERE giveaway_id = ? AND mirror_giveaway_id = ?').get(id, sourceId) as { participants?: number })?.participants || 0;
   }
 
-  // Calculate winners on-the-fly if giveaway is finished
+  // Calculate winners if giveaway is finished
   // Note: We do NOT include participants list for privacy
-  let winners: any[] = [], actualParticipants = -1;
+  let winners: any[] = [], actualParticipants = -1, manifestHash: string | null = null, frozen = false;
   if (giveaway.finished_at && giveaway.target_block && giveaway.winner_ranges) {
-    try {
-      // Only fetch participants needed for winner calculation (for admin use only)
-      const allParticipants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ?').all(id) as ParticipantRow[];
-      const targetBlock = await getBlock(giveaway.target_block) as Block;
-      if (targetBlock) {
-        const winnerRanges = JSON.parse(giveaway.winner_ranges);
-        const combinedWinnerRanges = [...winnerRanges, { count: allParticipants.length - winnerRanges[winnerRanges.length - 1].count, amount: 0 }];
-        const calculatedWinners = selectWinners(giveaway, allParticipants, combinedWinnerRanges, targetBlock.pow.proof);
-        winners = calculatedWinners.map((w, index: number) => ({
-          rank: index + 1,
-          participantId: w.participant.id,
-          amount: w.amount,
-          walletHash: hashAddress(giveaway.id, w.participant.tan_address)
-        }));
-        actualParticipants = allParticipants.reduce((a, b) => a + (b.approved > 0 ? 1 : 0), 0);
+    if (sourceId === id) {
+      // Canonical page: serve frozen verification manifest results (immutable once finished)
+      try {
+        const manifest = await ensureManifest(id);
+        if (manifest) {
+          winners = manifest.bundle.results.map((r) => ({
+            rank: r.rank,
+            amount: r.amount,
+            walletHash: r.h
+          }));
+          actualParticipants = manifest.bundle.participants.length;
+          manifestHash = manifest.hash;
+          frozen = true;
+        }
+      } catch (error) {
+        console.error('Error loading frozen results:', error);
       }
-    } catch (error) {
-      console.error('Error calculating winners:', error);
+    }
+    if (!frozen) {
+      // Fallback / mirror pages: calculate winners on-the-fly (wallet hashes are derived from the displayed id)
+      try {
+        const allParticipants = db.prepare('SELECT * FROM participants WHERE giveaway_id = ?').all(id) as ParticipantRow[];
+        const targetBlock = await getBlock(giveaway.target_block) as Block;
+        if (targetBlock) {
+          const winnerRanges = JSON.parse(giveaway.winner_ranges);
+          const combinedWinnerRanges = [...winnerRanges, { count: allParticipants.length - winnerRanges[winnerRanges.length - 1].count, amount: 0 }];
+          const calculatedWinners = selectWinners(giveaway, allParticipants, combinedWinnerRanges, targetBlock.pow.proof);
+          winners = calculatedWinners.map((w, index: number) => ({
+            rank: index + 1,
+            participantId: w.participant.id,
+            amount: w.amount,
+            walletHash: hashAddress(giveaway.id, w.participant.tan_address)
+          }));
+          actualParticipants = allParticipants.reduce((a, b) => a + (b.approved > 0 ? 1 : 0), 0);
+          manifestHash = (db.prepare('SELECT manifest_hash FROM giveaways WHERE id = ?').get(id) as { manifest_hash?: string | null } | undefined)?.manifest_hash || null;
+        }
+      } catch (error) {
+        console.error('Error calculating winners:', error);
+      }
     }
   }
 
@@ -458,8 +653,26 @@ app.get('/giveaway/:id', async (req: Request, res: Response) => {
     participants_count: actualParticipants >= 0 ? actualParticipants : giveaway.participants,
     winners: winners.filter((x) => x.amount > 0),
     participants: winners.filter((x) => x.amount <= 0),
-    mirror_participants: mirrorParticipants
+    mirror_participants: mirrorParticipants,
+    hash_id: giveaway.id,
+    manifest_hash: manifestHash
   });
+});
+
+// Public verification bundle: hash list + flags + ranked results + frozen digest
+app.get('/giveaway/:id/verify', async (req: Request, res: Response) => {
+  const id = toGiveawayId(req.params['id']);
+  try {
+    const manifest = await ensureManifest(id);
+    if (!manifest) {
+      res.status(409).json({ error: 'Verification data not available yet' });
+      return;
+    }
+    res.json({ ...manifest.bundle, manifest_hash: manifest.hash });
+  } catch (error) {
+    console.error('Error serving verification bundle:', error);
+    res.status(500).json({ error: 'Failed to build verification data' });
+  }
 });
 
 // Check participant approval
@@ -504,7 +717,9 @@ app.post('/giveaway/:id/participant', (req: Request, res: Response) => {
       x_username_mandatory: 1,
       created_at: new Date().toISOString(),
       finished_at: null,
-      mirror_giveaway_id: null
+      mirror_giveaway_id: null,
+      manifest: null,
+      manifest_hash: null
     };
   }
 
@@ -695,6 +910,17 @@ app.put('/giveaway/:id/manage', requireAdmin, async (req: Request, res: Response
     );
   }
 
+  if (finishedAtValue === 'CURRENT_TIMESTAMP') {
+    try {
+      await ensureManifest(id);
+    } catch (error) {
+      console.error(`Failed to freeze manifest for giveaway ${id}:`, error);
+    }
+  } else {
+    // Giveaway reactivated: discard the stale frozen results so a later finish rebuilds them
+    db.prepare('UPDATE giveaways SET manifest = NULL, manifest_hash = NULL WHERE id = ?').run(id);
+  }
+
   res.json({ message: 'Updated' });
 });
 
@@ -760,6 +986,36 @@ app.post('/giveaway/:id/build-payout', requireAdmin, async (req: Request, res: R
     return;
   }
 
+  // Payouts must match the frozen, publicly verifiable results whenever a manifest exists
+  const manifest = await ensureManifest(id);
+  if (manifest) {
+    const addressByHash = new Map<string, string>();
+    for (const p of approvedParticipants)
+      addressByHash.set(hashAddress(id, p.tan_address), p.tan_address);
+
+    const payoutRows = manifest.bundle.results.filter((r) => r.amount > 0);
+    if (payoutRows.length === 0) {
+      res.status(400).json({ error: 'Frozen results contain no winners' });
+      return;
+    }
+    const missing = payoutRows.find((r) => !addressByHash.get(r.h));
+    if (missing) {
+      res.status(409).json({ error: `Frozen winner ${missing.h} is no longer registered, refusing payout` });
+      return;
+    }
+
+    const payoutManifestAsset = new AssetId(giveaway.winning_token);
+    const unsignedTx = await buildTransaction(payoutManifestAsset, payoutRows.map((r) => ({ address: addressByHash.get(r.h) as string, value: new BigNumber(r.amount) })));
+    res.json({
+      winners: payoutRows.map((r) => ({ rank: r.rank, walletHash: r.h, amount: r.amount })),
+      unsignedTransaction: unsignedTx,
+      blockNumber: targetBlock.number,
+      proof: targetBlock.pow.proof,
+      manifest_hash: manifest.hash
+    });
+    return;
+  }
+
   const winnerRanges = JSON.parse(giveaway.winner_ranges);
   const winners = selectWinners(giveaway, approvedParticipants, winnerRanges, targetBlock.pow.proof);
   const asset = new AssetId(giveaway.winning_token);
@@ -791,10 +1047,16 @@ app.get('*', (_, res) => {
 // Start server
 app.listen(20420, () => {
   // Start auto-finish checker every minute
-  setInterval(autoFinishGiveaways, 60000);
-  
+  setInterval(() => {
+    autoFinishGiveaways();
+    backfillManifests();
+  }, 60000);
+
   // Run initial check
   autoFinishGiveaways();
+
+  // Freeze verification manifests for finished giveaways that predate the manifest feature
+  backfillManifests();
 });
 
 export default app;
