@@ -1,11 +1,14 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { config } from 'dotenv';
 import Database from 'better-sqlite3';
-import { AssetId, Chain, Signing, Transactions, Stream, SchemaUtil, Uint256, RPC, Hashsig } from 'tangentsdk';
+import path from 'path';
+import { config } from 'dotenv';
+import { AssetId, Chain, Signing, Uint256, Hashsig } from 'tangentsdk/algorithm';
+import { RPC } from 'tangentsdk/rpc';
+import { Stream, SchemaUtil } from 'tangentsdk/serialization';
+import { Transactions } from 'tangentsdk/schema';
 import { BigNumber } from 'bignumber.js';
 import { createHash } from 'crypto';
-import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
