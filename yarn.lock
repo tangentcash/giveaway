@@ -2759,7 +2759,7 @@ style-to-object@1.0.14:
 
 "tangentsdk@https://github.com/tangentcash/sdk.git":
   version "1.0.0"
-  resolved "https://github.com/tangentcash/sdk.git#bc36dd3cf2ffd94b7db17257784b1ec54e2f6473"
+  resolved "https://github.com/tangentcash/sdk.git#c0ad748621bbba32355d89e25e5506d435284726"
   dependencies:
     "@ethersproject/random" "5.8.0"
     "@noble/hashes" "1.8.0"
